@@ -3,7 +3,7 @@ import hashlib
 from authlib.oidc.core import UserInfo
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette.responses import StreamingResponse
-from typing import List
+from typing import List, cast
 
 from depot_server.db import collections
 from .auth import Authentication
@@ -63,7 +63,7 @@ async def create_picture(
         chunk = await file.read(4 * 1024)
         if not chunk:
             break
-        hash_.update(chunk)
+        hash_.update(cast(bytes, chunk))
     await file.seek(0)
     picture_id = hash_.digest().hex()
     try:

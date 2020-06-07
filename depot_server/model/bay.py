@@ -1,7 +1,8 @@
+from pydantic import Field
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from .base import BaseModel
 
 
 class Bay(BaseModel):

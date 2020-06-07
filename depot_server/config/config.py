@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -40,4 +40,4 @@ class Config(BaseModel):
     mail: MailConfig = Field(...)
     oauth2: OAuth2ClientConfig = Field(...)
     frontend_base_url: str = Field(...)
-    backend_cors_origin: str = Field(...)
+    allow_origins: List[str] = Field(...)

@@ -19,7 +19,7 @@ class DbReservation(BaseDocument):
     ]
 
     id: UUID = Field(..., alias='_id')
-    type: ReservationType
+    type: ReservationType = Field(...)
     name: str = Field(...)
 
     start: date = Field(...)

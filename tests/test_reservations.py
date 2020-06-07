@@ -10,7 +10,7 @@ from tests.db_helper import clear_all
 from tests.mock_auth import MockAuthentication, MockAuth
 
 
-def test_reservation(monkeypatch):
+def test_reservation(monkeypatch, motor_mock):
     monkeypatch.setattr(Authentication, '__call__', MockAuthentication.__call__)
 
     with TestClient(app) as client:
@@ -18,7 +18,7 @@ def test_reservation(monkeypatch):
 
         create_bay = BayInWrite(external_id='bay_1', name="Bay 1", description="Top Left")
         resp = client.post(
-            '/api/v1/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+            '/api/v1/depot/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
         )
         assert resp.status_code == 201, resp.text
         created_bay_1 = Bay.validate(resp.json())
@@ -40,7 +40,7 @@ def test_reservation(monkeypatch):
                 change_comment="Created",
             )
             resp = client.post(
-                '/api/v1/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+                '/api/v1/depot/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
             )
             assert resp.status_code == 201, resp.text
             created_item = Item.validate(resp.json())
@@ -56,7 +56,7 @@ def test_reservation(monkeypatch):
             items=item_ids,
         )
         resp = client.post(
-            '/api/v1/reservations',
+            '/api/v1/depot/reservations',
             data=create_reservation.json(),
             auth=MockAuth(sub='user1', groups=['my-team']),
         )
@@ -65,13 +65,13 @@ def test_reservation(monkeypatch):
         create_reservation.user_id = 'user1'
         assert ReservationInWrite.validate(created_reservation) == create_reservation
 
-        resp = client.get('/api/v1/reservations', auth=MockAuth(sub='user1'))
+        resp = client.get('/api/v1/depot/reservations', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         reservations = [Reservation.validate(b) for b in resp.json()]
         assert len(reservations) == 1
         assert reservations[0] == created_reservation
 
-        resp = client.get(f'/api/v1/reservations/{created_reservation.id}', auth=MockAuth(sub='user1'))
+        resp = client.get(f'/api/v1/depot/reservations/{created_reservation.id}', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         assert Reservation.validate(resp.json()) == created_reservation
 
@@ -86,7 +86,7 @@ def test_reservation(monkeypatch):
             items=[item_ids[0]],
         )
         resp = client.put(
-            f'/api/v1/reservations/{created_reservation.id}',
+            f'/api/v1/depot/reservations/{created_reservation.id}',
             data=update_reservation.json(),
             auth=MockAuth(sub='user2', groups=['my-team', 'my-team-upd']),
         )
@@ -96,16 +96,16 @@ def test_reservation(monkeypatch):
         assert ReservationInWrite.validate(updated_reservation) == update_reservation
 
         resp = client.delete(
-            f'/api/v1/reservations/{created_reservation.id}', auth=MockAuth(sub='user1')
+            f'/api/v1/depot/reservations/{created_reservation.id}', auth=MockAuth(sub='user1')
         )
         assert resp.status_code == 200, resp.text
 
-        resp = client.get('/api/v1/reservations', auth=MockAuth(sub='user1'))
+        resp = client.get('/api/v1/depot/reservations', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         assert len(resp.json()) == 0
 
 
-def test_overlap(monkeypatch):
+def test_overlap(monkeypatch, motor_mock):
     monkeypatch.setattr(Authentication, '__call__', MockAuthentication.__call__)
 
     with TestClient(app) as client:
@@ -113,7 +113,7 @@ def test_overlap(monkeypatch):
 
         create_bay = BayInWrite(external_id='bay_1', name="Bay 1", description="Top Left")
         resp = client.post(
-            '/api/v1/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+            '/api/v1/depot/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
         )
         assert resp.status_code == 201, resp.text
         created_bay_1 = Bay.validate(resp.json())
@@ -135,7 +135,7 @@ def test_overlap(monkeypatch):
                 change_comment="Created",
             )
             resp = client.post(
-                '/api/v1/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+                '/api/v1/depot/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
             )
             assert resp.status_code == 201, resp.text
             created_item = Item.validate(resp.json())
@@ -151,7 +151,7 @@ def test_overlap(monkeypatch):
             items=item_ids,
         )
         resp = client.post(
-            '/api/v1/reservations',
+            '/api/v1/depot/reservations',
             data=create_reservation.json(),
             auth=MockAuth(sub='user1', groups=['my-team']),
         )
@@ -169,7 +169,7 @@ def test_overlap(monkeypatch):
             items=item_ids[2:],
         )
         resp = client.post(
-            '/api/v1/reservations',
+            '/api/v1/depot/reservations',
             data=create_reservation.json(),
             auth=MockAuth(sub='user2'),
         )
@@ -184,8 +184,35 @@ def test_overlap(monkeypatch):
             items=item_ids[:1],
         )
         resp = client.post(
-            '/api/v1/reservations',
+            '/api/v1/depot/reservations',
             data=create_reservation.json(),
             auth=MockAuth(sub='user2'),
         )
         assert resp.status_code == 400, resp.text
+
+        start = (date.today() + timedelta(days=4)).isoformat()
+        end = (date.today() + timedelta(days=5)).isoformat()
+        resp = client.get(
+            f'/api/v1/depot/reservations/items?start={start}&end={end}',
+            auth=MockAuth(sub='user2'),
+        )
+        assert resp.status_code == 200, resp.text
+        assert set(resp.json()) == set(str(item_id) for item_id in item_ids)
+
+        start = (date.today() + timedelta(days=8)).isoformat()
+        end = (date.today() + timedelta(days=9)).isoformat()
+        resp = client.get(
+            f'/api/v1/depot/reservations/items?start={start}&end={end}',
+            auth=MockAuth(sub='user2'),
+        )
+        assert resp.status_code == 200, resp.text
+        assert set(resp.json()) == set(str(item_id) for item_id in item_ids)
+
+        start = (date.today() + timedelta(days=4)).isoformat()
+        end = (date.today() + timedelta(days=5)).isoformat()
+        resp = client.get(
+            f'/api/v1/depot/reservations/items?start={start}&end={end}&skip_reservation_id={created_reservation.id}',
+            auth=MockAuth(sub='user2'),
+        )
+        assert resp.status_code == 200, resp.text
+        assert set(resp.json()) == set()

@@ -9,7 +9,7 @@ from tests.db_helper import clear_all
 from tests.mock_auth import MockAuthentication, MockAuth
 
 
-def test_item(monkeypatch):
+def test_item(monkeypatch, motor_mock):
     monkeypatch.setattr(Authentication, '__call__', MockAuthentication.__call__)
 
     with TestClient(app) as client:
@@ -17,7 +17,7 @@ def test_item(monkeypatch):
 
         create_bay = BayInWrite(external_id='bay_1', name="Bay 1", description="Top Left")
         resp = client.post(
-            '/api/v1/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+            '/api/v1/depot/bays', data=create_bay.json(), auth=MockAuth(sub='admin1', roles=['admin']),
         )
         assert resp.status_code == 201, resp.text
         created_bay_1 = Bay.validate(resp.json())
@@ -37,20 +37,19 @@ def test_item(monkeypatch):
             change_comment="Created",
         )
         resp = client.post(
-            '/api/v1/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
+            '/api/v1/depot/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
         )
         assert resp.status_code == 201, resp.text
         created_item = Item.validate(resp.json())
-        create_item.change_comment = None
-        assert ItemInWrite.validate(created_item) == create_item
+        assert created_item.dict(exclude={'id'}) == create_item.dict(exclude={'change_comment'})
 
-        resp = client.get('/api/v1/items', auth=MockAuth(sub='user1'))
+        resp = client.get('/api/v1/depot/items', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         items = [Item.validate(b) for b in resp.json()]
         assert len(items) == 1
         assert items[0] == created_item
 
-        resp = client.get(f'/api/v1/items/{created_item.id}', auth=MockAuth(sub='user1'))
+        resp = client.get(f'/api/v1/depot/items/{created_item.id}', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         assert Item.validate(resp.json()) == created_item
 
@@ -69,14 +68,15 @@ def test_item(monkeypatch):
             change_comment="Updated",
         )
         resp = client.put(
-            f'/api/v1/items/{created_item.id}', data=update_item.json(), auth=MockAuth(sub='admin2', roles=['admin'])
+            f'/api/v1/depot/items/{created_item.id}',
+            data=update_item.json(),
+            auth=MockAuth(sub='admin2', roles=['admin'])
         )
         assert resp.status_code == 200, resp.text
         updated_item = Item.validate(resp.json())
-        update_item.change_comment = None
-        assert ItemInWrite.validate(updated_item) == update_item
+        assert updated_item.dict(exclude={'id'}) == update_item.dict(exclude={'change_comment'})
 
-        resp = client.get(f'/api/v1/items/{created_item.id}/history', auth=MockAuth(sub='user1'))
+        resp = client.get(f'/api/v1/depot/items/{created_item.id}/history', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         states = [ItemState.validate(r) for r in resp.json()]
         assert len(states) == 2
@@ -108,10 +108,10 @@ def test_item(monkeypatch):
         assert states[1].changes.bay_id.next == create_item.bay_id
 
         resp = client.delete(
-            f'/api/v1/items/{created_item.id}', auth=MockAuth(sub='admin1', roles=['admin'])
+            f'/api/v1/depot/items/{created_item.id}', auth=MockAuth(sub='admin1', roles=['admin'])
         )
         assert resp.status_code == 200, resp.text
 
-        resp = client.get('/api/v1/items', auth=MockAuth(sub='user1'))
+        resp = client.get('/api/v1/depot/items', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
         assert len(resp.json()) == 0

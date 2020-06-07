@@ -9,10 +9,10 @@ from depot_server.config import config
 from depot_server.db import startup as db_startup, shutdown as db_shutdown
 
 router = APIRouter()
-router.include_router(bays_router, prefix='/api/v1')
-router.include_router(items_router, prefix='/api/v1')
-router.include_router(reservations_router, prefix='/api/v1')
-router.include_router(pictures_router, prefix='/api/v1')
+router.include_router(bays_router, prefix='/api/v1/depot')
+router.include_router(items_router, prefix='/api/v1/depot')
+router.include_router(reservations_router, prefix='/api/v1/depot')
+router.include_router(pictures_router, prefix='/api/v1/depot')
 
 
 @router.on_event('startup')
@@ -28,7 +28,7 @@ async def shutdown():
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.backend_cors_origin],
+    allow_origins=config.allow_origins,
     allow_credentials=True,
     allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allow_headers=['*'],

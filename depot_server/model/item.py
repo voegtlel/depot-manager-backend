@@ -1,9 +1,11 @@
 import enum
+
 from datetime import date, datetime
+from pydantic import Field
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from .base import BaseModel
 
 
 class ItemCondition(str, enum.Enum):
@@ -54,7 +56,7 @@ class ItemInWrite(BaseModel):
 
     bay_id: Optional[UUID] = None
 
-    change_comment: Optional[str] = None
+    change_comment: str = Field(...)
 
 
 class StrChange(BaseModel):
@@ -100,8 +102,6 @@ class ItemStateChanges(BaseModel):
     tags: Optional[TagsChange] = None
 
     bay_id: Optional[IdChange] = None
-
-    change_comment: Optional[StrChange] = None
 
 
 class ItemState(BaseModel):

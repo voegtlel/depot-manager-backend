@@ -1,10 +1,9 @@
-from datetime import date
-from typing import List, Optional
-from uuid import UUID, uuid4
-
 from authlib.oidc.core import UserInfo
+from datetime import date
 from fastapi import APIRouter, Depends, Body, Query, HTTPException
 from pymongo import DESCENDING
+from typing import List, Optional
+from uuid import UUID, uuid4
 
 from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
     DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange
@@ -91,10 +90,9 @@ async def create_item(
         _user: UserInfo = Depends(Authentication(require_manager=True)),
 ) -> Item:
     change_comment = item.change_comment
-    item.change_comment = None
     db_item = DbItem(
         id=uuid4(),
-        **item.dict(exclude_none=True),
+        **item.dict(exclude_none=True, exclude={'change_comment'}),
     )
     await collections.item_collection.insert_one(db_item)
     await _save_state(DbItem(id=db_item.id, name=""), db_item, change_comment, _user['sub'])
@@ -115,13 +113,12 @@ async def update_item(
     if item_data is None:
         raise HTTPException(404, f"Item {item_id} not found")
     change_comment = item.change_comment
-    item.change_comment = None
     if item.bay_id is not None:
         if not await collections.bay_collection.exists({'_id': item.bay_id}):
             raise HTTPException(404, f"Bay {item.bay_id} not found")
     db_item = DbItem(
         id=item_id,
-        **item.dict()
+        **item.dict(exclude_none=True, exclude={'change_comment'})
     )
     await _save_state(item_data, db_item, change_comment, _user['sub'])
     if not await collections.item_collection.replace_one(db_item):

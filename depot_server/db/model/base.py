@@ -31,7 +31,7 @@ def _validate_document(doc: Any, type_: type) -> Any:
             for key, field in type_.__fields__.items()
         }
     if issubclass(type_, date) and isinstance(doc, (int, float)):
-        return date.fromordinal(doc)
+        return date.fromordinal(int(doc))
     return doc
 
 

@@ -1,14 +1,16 @@
+from enum import Enum
+
 from datetime import date
-from enum import IntEnum
+from pydantic import Field
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from .base import BaseModel
 
 
-class ReservationType(IntEnum):
-    PRIVATE = 1
-    TEAM = 2
+class ReservationType(str, Enum):
+    PRIVATE = 'private'
+    TEAM = 'team'
 
 
 class Reservation(BaseModel):

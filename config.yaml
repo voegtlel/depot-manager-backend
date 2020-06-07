@@ -1,5 +1,5 @@
 frontend_base_url: http://127.0.0.1:4200
-backend_cors_origin: http://127.0.0.1:8001
+allow_origins: []
 
 mongo:
   uri: mongodb://127.0.0.1:27017/depot

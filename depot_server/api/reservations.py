@@ -1,10 +1,9 @@
-from datetime import date
-from typing import List, Optional
-from uuid import UUID, uuid4
-
 from authlib.oidc.core import UserInfo
+from datetime import date
 from fastapi import APIRouter, Depends, Body, Query, HTTPException
 from pymongo import DESCENDING, ASCENDING
+from typing import List, Optional, Set
+from uuid import UUID, uuid4
 
 from depot_server.db import collections, DbReservation
 from depot_server.model import Reservation, ReservationInWrite
@@ -27,13 +26,13 @@ async def _check_items(item_ids: List[UUID], start: date, end: date, skip_reserv
     if len(safe_item_ids) != len(item_ids):
         raise HTTPException(404, "Some items were not found")
     item_ids_set = set(item_ids)
-    async for reservation in collections.reservation_collection.find({
+    async for reservation in collections.reservation_collection.collection.find({
         'items': {'$in': item_ids},
         'end': {'$gte': start.toordinal()},
         'start': {'$lte': end.toordinal()},
         **skip_id
-    }):
-        if not item_ids_set.isdisjoint(reservation.items):
+    }, projection={'items': 1, '_id': 0}):
+        if not item_ids_set.isdisjoint(reservation['items']):
             raise HTTPException(400, "Some items are already reserved")
 
 
@@ -109,6 +108,34 @@ async def get_reservations(
         mid = []
 
     return before_start + mid + after_end
+
+
+@router.get(
+    '/reservations/items',
+    tags=['Item'],
+    response_model=List[UUID],
+)
+async def get_reservations_items(
+        start: date = Query(...),
+        end: date = Query(...),
+        skip_reservation_id: Optional[UUID] = Query(None),
+        _user: UserInfo = Depends(Authentication()),
+) -> List[UUID]:
+    if skip_reservation_id is None:
+        skip_id: dict = {}
+    else:
+        skip_id = {
+            '_id': {'$ne': skip_reservation_id}
+        }
+    item_ids: Set[UUID] = set()
+    async for reservation in collections.reservation_collection.collection.find({
+        'end': {'$gte': start.toordinal()},
+        'start': {'$lte': end.toordinal()},
+        **skip_id
+    }, projection={'items': 1, '_id': 0}):
+        item_ids.update(reservation['items'])
+
+    return list(item_ids)
 
 
 @router.get(
