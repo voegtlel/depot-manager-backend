@@ -5,7 +5,7 @@ from typing import Any, Dict, Union, Type, TypeVar
 import oyaml as yaml
 from pydantic import BaseModel
 
-DEFAULT_PATH = os.environ.get('API_CONFIG_FILE', os.path.join(os.path.dirname(__file__), '..', '..', 'config.yaml'))
+DEFAULT_PATH = os.environ.get('API_CONFIG_FILE', os.path.join(os.path.dirname(__file__), '..', 'config.yaml'))
 
 
 def camelcase_to_underscore(camelcase: str) -> str:
