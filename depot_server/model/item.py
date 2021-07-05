@@ -1,19 +1,11 @@
-import enum
-
-from datetime import date, datetime
+from datetime import date
 from pydantic import Field
 from typing import List, Optional
 from uuid import UUID
 
 from .base import BaseModel
-
-
-class ItemCondition(str, enum.Enum):
-    Good = 'good'
-    Ok = 'ok'
-    Bad = 'bad'
-    Gone = 'gone'
-    New = 'new'
+from .item_state import ItemReport, ItemCondition
+from .report_profile import TotalReportState
 
 
 class Item(BaseModel):
@@ -22,6 +14,9 @@ class Item(BaseModel):
     name: str = Field(...)
     description: Optional[str] = None
 
+    report_profile_id: Optional[UUID] = None
+
+    total_report_state: TotalReportState = Field(...)
     condition: ItemCondition = Field(...)
     condition_comment: Optional[str] = None
 
@@ -42,11 +37,12 @@ class ItemInWrite(BaseModel):
     name: str = Field(...)
     description: Optional[str] = None
 
+    report_profile_id: Optional[UUID] = None
+
     condition: ItemCondition = Field(...)
     condition_comment: Optional[str] = None
 
     purchase_date: Optional[date] = None
-    last_service: Optional[date] = None
 
     picture_id: Optional[str] = None
 
@@ -59,59 +55,8 @@ class ItemInWrite(BaseModel):
     change_comment: str = Field(...)
 
 
-class StrChange(BaseModel):
-    previous: Optional[str]
-    next: Optional[str]
+class ReportItemInWrite(ItemInWrite):
+    last_service: Optional[date] = None
 
-
-class IdChange(BaseModel):
-    previous: Optional[UUID]
-    next: Optional[UUID]
-
-
-class DateChange(BaseModel):
-    previous: Optional[date]
-    next: Optional[date]
-
-
-class TagsChange(BaseModel):
-    previous: List[str]
-    next: List[str]
-
-
-class ItemConditionChange(BaseModel):
-    previous: ItemCondition
-    next: ItemCondition
-
-
-class ItemStateChanges(BaseModel):
-    external_id: Optional[StrChange] = None
-    name: Optional[StrChange] = None
-    description: Optional[StrChange] = None
-
-    condition: Optional[ItemConditionChange] = None
-    condition_comment: Optional[StrChange] = None
-
-    purchase_date: Optional[DateChange] = None
-    last_service: Optional[DateChange] = None
-
-    picture_id: Optional[StrChange] = None
-
-    group_id: Optional[StrChange] = None
-
-    tags: Optional[TagsChange] = None
-
-    bay_id: Optional[IdChange] = None
-
-
-class ItemState(BaseModel):
-    id: UUID = Field(...)
-    item_id: UUID = Field(...)
-
-    timestamp: datetime = Field(...)
-
-    changes: ItemStateChanges = Field(...)
-
-    user_id: str = Field(...)
-
-    comment: str = Field(...)
+    total_report_state: TotalReportState = Field(...)
+    report: List[ItemReport]

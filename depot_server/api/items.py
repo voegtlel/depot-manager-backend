@@ -2,19 +2,28 @@ from authlib.oidc.core import UserInfo
 from datetime import date
 from fastapi import APIRouter, Depends, Body, Query, HTTPException
 from pymongo import DESCENDING
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID, uuid4
 
 from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
-    DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange
-from depot_server.model import Item, ItemInWrite, ItemState
+    DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange, DbTotalReportStateChange, \
+    DbItemReport
+from depot_server.model import Item, ItemInWrite, ItemState, ReportItemInWrite
 from .auth import Authentication
 from .util import utc_now
+from ..db.model import DbReportElement
+from ..model.item_state import ItemReport
 
 router = APIRouter()
 
 
-async def _save_state(prev_item: DbItem, new_item: DbItem, change_comment: Optional[str], user_id: str):
+async def _save_state(
+        prev_item: DbItem,
+        new_item: DbItem,
+        report: Optional[List[DbItemReport]],
+        change_comment: Optional[str],
+        user_id: str,
+):
     changes = DbItemStateChanges()
     assert prev_item.id == new_item.id
     if prev_item.external_id != new_item.external_id:
@@ -23,6 +32,10 @@ async def _save_state(prev_item: DbItem, new_item: DbItem, change_comment: Optio
         changes.name = DbStrChange(previous=prev_item.name, next=new_item.name)
     if prev_item.description != new_item.description:
         changes.description = DbStrChange(previous=prev_item.description, next=new_item.description)
+    if prev_item.report_profile_id != new_item.report_profile_id:
+        changes.report_profile_id = DbIdChange(previous=prev_item.report_profile_id, next=new_item.report_profile_id)
+    if prev_item.total_report_state != new_item.total_report_state:
+        changes.condition = DbTotalReportStateChange(previous=prev_item.total_report_state, next=new_item.total_report_state)
     if prev_item.condition != new_item.condition:
         changes.condition = DbItemConditionChange(previous=prev_item.condition, next=new_item.condition)
     if prev_item.condition_comment != new_item.condition_comment:
@@ -44,9 +57,30 @@ async def _save_state(prev_item: DbItem, new_item: DbItem, change_comment: Optio
         item_id=new_item.id,
         timestamp=utc_now(),
         changes=changes,
+        report=report,
         user_id=user_id,
         comment=change_comment,
     ))
+
+
+async def _get_report(report_profile_id: Optional[UUID], report: List[ItemReport]) -> Optional[List[DbItemReport]]:
+    if report_profile_id is None:
+        if report:
+            raise HTTPException(404, f"Report profile not set, but report is set")
+        return None
+    report_profile = await collections.report_profile_collection.find_one(report_profile_id)
+    if report_profile is None:
+        raise HTTPException(404, f"Report profile {report_profile_id} not found")
+    report_elements_by_id: Dict[UUID, DbReportElement] = {
+        el.id: el async for el in collections.report_element_collection.find({'_id': {'$in': report_profile.elements}})
+    }
+    if len(report_elements_by_id) != len(report_profile.elements):
+        raise ValueError("Internal error: Report elements do not match")
+
+    for report_entry in report:
+        if report_entry.report_element_id not in report_elements_by_id:
+            raise HTTPException(400, f"Invalid report element: {report_entry.report_element_id}")
+    return [DbItemReport(**report_entry.dict(exclude_none=True)) for report_entry in report]
 
 
 @router.get(
@@ -86,16 +120,17 @@ async def get_item(
     status_code=201,
 )
 async def create_item(
-        item: ItemInWrite = Body(...),
+        item: ReportItemInWrite = Body(...),
         _user: UserInfo = Depends(Authentication(require_manager=True)),
 ) -> Item:
     change_comment = item.change_comment
     db_item = DbItem(
         id=uuid4(),
-        **item.dict(exclude_none=True, exclude={'change_comment'}),
+        **item.dict(exclude_none=True, exclude={'change_comment', 'report'}),
     )
+    report = await _get_report(db_item.report_profile_id, item.report)
     await collections.item_collection.insert_one(db_item)
-    await _save_state(DbItem(id=db_item.id, name=""), db_item, change_comment, _user['sub'])
+    await _save_state(DbItem(id=db_item.id, name=""), db_item, report, change_comment, _user['sub'])
     return Item.validate(db_item)
 
 
@@ -118,9 +153,41 @@ async def update_item(
             raise HTTPException(404, f"Bay {item.bay_id} not found")
     db_item = DbItem(
         id=item_id,
+        total_report_state=item_data.total_report_state,
+        last_service=item_data.last_service,
         **item.dict(exclude_none=True, exclude={'change_comment'})
     )
-    await _save_state(item_data, db_item, change_comment, _user['sub'])
+    await _save_state(item_data, db_item, None, change_comment, _user['sub'])
+    if not await collections.item_collection.replace_one(db_item):
+        raise HTTPException(404, f"Item {item_id} not found")
+    return Item.validate(db_item)
+
+
+@router.put(
+    '/items/{item_id}/report',
+    tags=['Item'],
+    response_model=Item,
+)
+async def report_item(
+        item_id: UUID,
+        item: ReportItemInWrite = Body(...),
+        _user: UserInfo = Depends(Authentication(require_manager=True)),
+) -> Item:
+    item_data = await collections.item_collection.find_one({'_id': item_id})
+    if item_data is None:
+        raise HTTPException(404, f"Item {item_id} not found")
+    change_comment = item.change_comment
+    if item.bay_id is not None:
+        if not await collections.bay_collection.exists({'_id': item.bay_id}):
+            raise HTTPException(404, f"Bay {item.bay_id} not found")
+    db_item = DbItem(
+        id=item_id,
+        **item.dict(exclude_none=True, exclude={'change_comment', 'report'})
+    )
+
+    report = await _get_report(db_item.report_profile_id, item.report)
+
+    await _save_state(item_data, db_item, report, change_comment, _user['sub'])
     if not await collections.item_collection.replace_one(db_item):
         raise HTTPException(404, f"Item {item_id} not found")
     return Item.validate(db_item)

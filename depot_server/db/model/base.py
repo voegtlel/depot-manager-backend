@@ -3,7 +3,7 @@ from enum import Enum
 from datetime import datetime, date
 from pydantic import BaseModel
 from pymongo import IndexModel
-from typing import List, Any, Sequence, Mapping, TypeVar, Type
+from typing import List, Any, Sequence, Mapping, TypeVar, Type, get_origin, get_args, Generic
 from uuid import UUID
 
 
@@ -24,13 +24,23 @@ def _safe_document(doc: Any):
 def _validate_document(doc: Any, type_: type) -> Any:
     if doc is None:
         return doc
-    if issubclass(type_, BaseSubDocument):
+    org = get_origin(type_)
+    if isinstance(type_, Type) and issubclass(type_, BaseSubDocument):
         assert isinstance(doc, dict)
         return {
-            key: _validate_document(doc.get(field.alias if field.has_alias else key), field.type_)
+            key: _validate_document(doc.get(field.alias if field.has_alias else key), field.outer_type_)
             for key, field in type_.__fields__.items()
         }
-    if issubclass(type_, date) and isinstance(doc, (int, float)):
+    elif org is not None and issubclass(org, list):
+        assert isinstance(doc, list)
+        t_inner = getattr(type_, '__args__', ())[0]
+        return [_validate_document(value, t_inner) for value in doc]
+    elif org is not None and issubclass(org, dict):
+        assert isinstance(doc, dict)
+        t_k_inner = getattr(type_, '__args__', ())[0]
+        t_v_inner = getattr(type_, '__args__', ())[1]
+        return {_validate_document(k, t_k_inner): _validate_document(v, t_v_inner) for k, v in doc.items()}
+    elif issubclass(type_, date) and isinstance(doc, (int, float)):
         return date.fromordinal(int(doc))
     return doc
 
