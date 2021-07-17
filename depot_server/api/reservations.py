@@ -5,6 +5,7 @@ from pymongo import DESCENDING, ASCENDING
 from typing import List, Optional, Set
 from uuid import UUID, uuid4
 
+from depot_server.config import config
 from depot_server.db import collections, DbReservation
 from depot_server.model import Reservation, ReservationInWrite
 from .auth import Authentication
@@ -161,9 +162,9 @@ async def get_reservation(
 )
 async def create_reservation(
         reservation: ReservationInWrite = Body(...),
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> Reservation:
-    if reservation.team_id is not None and reservation.team_id not in _user['groups']:
+    if reservation.team_id is not None and reservation.team_id not in _user[config.oauth2.teams_property]:
         raise HTTPException(400, f"User is not in team {reservation.team_id}")
     if reservation.user_id is None:
         reservation.user_id = _user['sub']
@@ -186,16 +187,18 @@ async def create_reservation(
 async def update_reservation(
         reservation_id: UUID,
         reservation: ReservationInWrite = Body(...),
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> Reservation:
     prev_reservation = await collections.reservation_collection.find_one({'_id': reservation_id})
     if prev_reservation is None:
         raise HTTPException(404, f"Reservation {reservation_id} not found")
     if prev_reservation.user_id != _user['sub'] and (
-            prev_reservation.team_id not in _user['groups'] or prev_reservation.team_id is None
+            prev_reservation.team_id not in _user.get(config.oauth2.teams_property, []) or
+            prev_reservation.team_id is None
     ) and 'admin' not in _user['roles']:
         raise HTTPException(403, f"Cannot modify {reservation_id}")
-    if reservation.team_id is not None and reservation.team_id not in _user['groups']:
+    if reservation.team_id is not None and reservation.team_id not in _user.get(config.oauth2.teams_property, []) and \
+            'admin' not in _user['roles']:
         raise HTTPException(400, f"User is not in team {reservation.team_id}")
     if reservation.user_id is None:
         reservation.user_id = _user['sub']
@@ -227,13 +230,14 @@ async def update_reservation(
 )
 async def delete_reservation(
         reservation_id: UUID,
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> None:
     reservation = await collections.reservation_collection.find_one({'_id': reservation_id})
     if reservation is None:
         raise HTTPException(404, f"Reservation {reservation_id} not found")
     if (reservation.start <= date.today() or (reservation.user_id != _user['sub'] and (
-            reservation.team_id not in _user['groups'] or reservation.team_id is None
+            reservation.team_id not in _user.get(config.oauth2.teams_property, []) or
+            reservation.team_id is None
     ))) and 'admin' not in _user['roles']:
         raise HTTPException(403, f"Cannot delete {reservation_id}")
     if not await collections.reservation_collection.delete_one({'_id': reservation_id}):

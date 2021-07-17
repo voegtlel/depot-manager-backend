@@ -14,16 +14,23 @@ class DbItem(BaseDocument):
 
     id: UUID = Field(..., alias='_id')
     external_id: Optional[str] = None
+
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    manufacture_date: Optional[date] = None
+    purchase_date: Optional[date] = None
+    first_use_date: Optional[date] = None
+
     name: str = Field(...)
     description: Optional[str] = None
 
     report_profile_id: Optional[UUID] = None
 
-    total_report_state: TotalReportState = TotalReportState.Fit
+    total_report_state: Optional[TotalReportState] = TotalReportState.Fit
     condition: ItemCondition = ItemCondition.New
     condition_comment: Optional[str] = None
 
-    purchase_date: Optional[date] = None
     last_service: Optional[date] = None
 
     picture_id: Optional[str] = None

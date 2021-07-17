@@ -38,7 +38,7 @@ def _create_report_profile(client: Session) -> Tuple[ReportProfile, Tuple[Report
     assert ReportElementInWrite.validate(created_report_element_3) == create_report_element_3
 
     create_report_profile = ReportProfileInWrite(
-        title="Prof1",
+        name="Prof1",
         description="ProfileDesc1",
         elements=[created_report_element_1.id, created_report_element_3.id],
     )

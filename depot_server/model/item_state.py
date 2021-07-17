@@ -39,8 +39,8 @@ class TagsChange(BaseModel):
 
 
 class TotalReportStateChange(BaseModel):
-    previous: TotalReportState
-    next: TotalReportState
+    previous: Optional[TotalReportState]
+    next: Optional[TotalReportState]
 
 
 class ItemConditionChange(BaseModel):
@@ -50,6 +50,14 @@ class ItemConditionChange(BaseModel):
 
 class ItemStateChanges(BaseModel):
     external_id: Optional[StrChange] = None
+
+    manufacturer: Optional[StrChange] = None
+    model: Optional[StrChange] = None
+    serial_number: Optional[StrChange] = None
+    manufacture_date: Optional[DateChange] = None
+    purchase_date: Optional[DateChange] = None
+    first_use_date: Optional[DateChange] = None
+
     name: Optional[StrChange] = None
     description: Optional[StrChange] = None
 
@@ -59,7 +67,6 @@ class ItemStateChanges(BaseModel):
     condition: Optional[ItemConditionChange] = None
     condition_comment: Optional[StrChange] = None
 
-    purchase_date: Optional[DateChange] = None
     last_service: Optional[DateChange] = None
 
     picture_id: Optional[StrChange] = None

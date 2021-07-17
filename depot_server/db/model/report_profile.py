@@ -12,6 +12,6 @@ class DbReportProfile(BaseDocument):
     __indexes__ = []
 
     id: UUID = Field(..., alias='_id')
-    title: str = Field(...)
+    name: str = Field(...)
     description: str = Field(...)
     elements: List[UUID] = Field(...)

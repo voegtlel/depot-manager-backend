@@ -28,6 +28,18 @@ async def _save_state(
     assert prev_item.id == new_item.id
     if prev_item.external_id != new_item.external_id:
         changes.external_id = DbStrChange(previous=prev_item.external_id, next=new_item.external_id)
+    if prev_item.manufacturer != new_item.manufacturer:
+        changes.manufacturer = DbStrChange(previous=prev_item.manufacturer, next=new_item.manufacturer)
+    if prev_item.model != new_item.model:
+        changes.model = DbStrChange(previous=prev_item.model, next=new_item.model)
+    if prev_item.serial_number != new_item.serial_number:
+        changes.serial_number = DbStrChange(previous=prev_item.serial_number, next=new_item.serial_number)
+    if prev_item.manufacture_date != new_item.manufacture_date:
+        changes.manufacture_date = DbDateChange(previous=prev_item.manufacture_date, next=new_item.manufacture_date)
+    if prev_item.purchase_date != new_item.purchase_date:
+        changes.purchase_date = DbDateChange(previous=prev_item.purchase_date, next=new_item.purchase_date)
+    if prev_item.first_use_date != new_item.first_use_date:
+        changes.first_use_date = DbDateChange(previous=prev_item.first_use_date, next=new_item.first_use_date)
     if prev_item.name != new_item.name:
         changes.name = DbStrChange(previous=prev_item.name, next=new_item.name)
     if prev_item.description != new_item.description:
@@ -35,13 +47,11 @@ async def _save_state(
     if prev_item.report_profile_id != new_item.report_profile_id:
         changes.report_profile_id = DbIdChange(previous=prev_item.report_profile_id, next=new_item.report_profile_id)
     if prev_item.total_report_state != new_item.total_report_state:
-        changes.condition = DbTotalReportStateChange(previous=prev_item.total_report_state, next=new_item.total_report_state)
+        changes.total_report_state = DbTotalReportStateChange(previous=prev_item.total_report_state, next=new_item.total_report_state)
     if prev_item.condition != new_item.condition:
         changes.condition = DbItemConditionChange(previous=prev_item.condition, next=new_item.condition)
     if prev_item.condition_comment != new_item.condition_comment:
         changes.condition_comment = DbStrChange(previous=prev_item.condition_comment, next=new_item.condition_comment)
-    if prev_item.purchase_date != new_item.purchase_date:
-        changes.purchase_date = DbDateChange(previous=prev_item.purchase_date, next=new_item.purchase_date)
     if prev_item.last_service != new_item.last_service:
         changes.last_service = DbDateChange(previous=prev_item.last_service, next=new_item.last_service)
     if prev_item.picture_id != new_item.picture_id:

@@ -10,7 +10,7 @@ from depot_server.config import config
 
 
 class StarletteRemoteApp(_StarletteRemoteApp):
-    async def parse_id_token_raw(self, token: str) -> UserInfo:
+    async def parse_access_token_raw(self, token: str) -> UserInfo:
         return await self._parse_id_token({'id_token': token, 'access_token': True}, nonce=None, claims_options=None)
 
 
@@ -25,10 +25,17 @@ oauth.register('server', **config.oauth2.dict())
 
 
 class Authentication:
-    def __init__(self, require_manager: bool = False, require_admin: bool = False, auto_error: bool = True):
+    def __init__(
+            self,
+            require_manager: bool = False,
+            require_admin: bool = False,
+            auto_error: bool = True,
+            require_userinfo: bool = False,
+    ):
         self.require_manager = require_manager
         self.require_admin = require_admin
         self.auto_error = auto_error
+        self.require_userinfo = require_userinfo
 
     async def __call__(
             self,
@@ -40,7 +47,7 @@ class Authentication:
                     status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
                 )
             return None
-        token_data = await oauth.server.parse_id_token_raw(authorization_code.credentials)
+        token_data = await oauth.server.parse_access_token_raw(authorization_code.credentials)
         if self.require_admin and 'admin' not in token_data['roles']:
             if self.auto_error:
                 raise HTTPException(
@@ -53,4 +60,9 @@ class Authentication:
                     status_code=HTTP_403_FORBIDDEN, detail="Need manager"
                 )
             return None
+        if self.require_userinfo:
+            userinfo = await oauth.server.userinfo(
+                token={'token_type': 'bearer', 'access_token': authorization_code.credentials}
+            )
+            token_data.update(userinfo)
         return token_data

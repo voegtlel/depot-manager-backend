@@ -34,6 +34,8 @@ class OAuth2ClientConfig(BaseModel):
     api_base_url: Optional[str]
     server_metadata_url: Optional[str]
 
+    teams_property: str = 'teams'
+
 
 class Config(BaseModel):
     mongo: MongoConfig = Field(...)

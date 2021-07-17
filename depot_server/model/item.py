@@ -11,16 +11,23 @@ from .report_profile import TotalReportState
 class Item(BaseModel):
     id: UUID = Field(...)
     external_id: Optional[str] = None
+
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    manufacture_date: Optional[date] = None
+    purchase_date: Optional[date] = None
+    first_use_date: Optional[date] = None
+
     name: str = Field(...)
     description: Optional[str] = None
 
     report_profile_id: Optional[UUID] = None
 
-    total_report_state: TotalReportState = Field(...)
+    total_report_state: Optional[TotalReportState] = Field(...)
     condition: ItemCondition = Field(...)
     condition_comment: Optional[str] = None
 
-    purchase_date: Optional[date] = None
     last_service: Optional[date] = None
 
     picture_id: Optional[str] = None
@@ -34,6 +41,14 @@ class Item(BaseModel):
 
 class ItemInWrite(BaseModel):
     external_id: Optional[str] = None
+
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    manufacture_date: Optional[date] = None
+    purchase_date: Optional[date] = None
+    first_use_date: Optional[date] = None
+
     name: str = Field(...)
     description: Optional[str] = None
 
@@ -41,8 +56,6 @@ class ItemInWrite(BaseModel):
 
     condition: ItemCondition = Field(...)
     condition_comment: Optional[str] = None
-
-    purchase_date: Optional[date] = None
 
     picture_id: Optional[str] = None
 

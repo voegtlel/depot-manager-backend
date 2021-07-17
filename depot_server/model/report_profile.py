@@ -14,12 +14,12 @@ class TotalReportState(Enum):
 
 class ReportProfile(BaseModel):
     id: UUID = Field(...)
-    title: str = Field(...)
+    name: str = Field(...)
     description: str = Field(...)
     elements: List[UUID] = Field(...)
 
 
 class ReportProfileInWrite(BaseModel):
-    title: str = Field(...)
+    name: str = Field(...)
     description: str = Field(...)
     elements: List[UUID] = Field(...)

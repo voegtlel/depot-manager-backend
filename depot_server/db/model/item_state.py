@@ -30,8 +30,8 @@ class DbTagsChange(BaseSubDocument):
 
 
 class DbTotalReportStateChange(BaseSubDocument):
-    previous: TotalReportState
-    next: TotalReportState
+    previous: Optional[TotalReportState]
+    next: Optional[TotalReportState]
 
 
 class DbItemConditionChange(BaseSubDocument):
