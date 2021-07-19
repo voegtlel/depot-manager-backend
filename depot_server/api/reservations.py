@@ -1,7 +1,3 @@
-import traceback
-
-import asyncio
-
 from authlib.oidc.core import UserInfo
 from datetime import date
 from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks
@@ -11,9 +7,9 @@ from uuid import UUID, uuid4
 
 from depot_server.config import config
 from depot_server.db import collections, DbReservation, DbItem
+from depot_server.helper.auth import Authentication
 from depot_server.mail.manager_item_problem import send_manager_item_problem, ProblemItem
 from depot_server.model import Reservation, ReservationInWrite, ReservationReturnInWrite
-from depot_server.helper.auth import Authentication
 
 router = APIRouter()
 
@@ -53,6 +49,7 @@ async def get_reservations(
         start: Optional[date] = Query(None),
         end: Optional[date] = Query(None),
         item_id: Optional[UUID] = Query(None),
+        include_returned: Optional[bool] = Query(False),
         offset: Optional[int] = Query(None, ge=0),
         limit: Optional[int] = Query(None, gt=0),
         limit_before_start: Optional[int] = Query(None, gt=0),
@@ -66,6 +63,8 @@ async def get_reservations(
         query['user_id'] = _user['sub']
     if item_id is not None:
         query['items'] = item_id
+    if not include_returned:
+        query['returned'] = False
     if limit_before_start is not None:
         if start is None:
             raise HTTPException(400, "Require start for limit_before_start")

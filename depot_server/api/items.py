@@ -174,7 +174,7 @@ async def update_item(
         raise HTTPException(404, f"Item {item_id} not found")
     # !Gone -> Gone -> Notify reservations
     if item_data.condition != ItemCondition.Gone and db_item.condition == ItemCondition.Gone:
-        async for reservation in collections.reservation_collection.find({'item_id': item_id, 'returned': {'$ne': True}}):
+        async for reservation in collections.reservation_collection.find({'item_id': item_id, 'returned': False}):
             background_tasks.add_task(send_reservation_item_removed, _user, db_item, reservation)
     return Item.validate(db_item)
 

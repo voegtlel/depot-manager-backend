@@ -28,6 +28,8 @@ class Reservation(BaseModel):
 
     items: List[UUID] = Field(...)
 
+    returned: bool = Field(...)
+
 
 class ReservationInWrite(BaseModel):
     type: ReservationType = Field(...)
