@@ -1,15 +1,13 @@
 from authlib.oidc.core import UserInfo
 from datetime import date
-from fastapi import APIRouter, Depends, Body, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pymongo import DESCENDING
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
-    DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange
-from depot_server.model import Item, ItemInWrite, ItemState
-from .auth import Authentication
-from .util import utc_now
+from depot_server.db import collections
+from depot_server.model import ItemState
+from depot_server.helper.auth import Authentication
 
 router = APIRouter()
 

@@ -31,3 +31,5 @@ class DbReservation(BaseDocument):
     contact: str = Field(...)
 
     items: List[UUID] = Field(...)
+
+    returned: bool = Field(False)

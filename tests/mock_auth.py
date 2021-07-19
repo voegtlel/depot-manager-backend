@@ -7,7 +7,7 @@ from authlib.oidc.core import UserInfo
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from depot_server.api.auth import Authentication
+from depot_server.helper.auth import Authentication
 
 
 class MockAuthentication(Authentication):
@@ -39,13 +39,13 @@ class MockAuthentication(Authentication):
 
 
 class MockAuth(requests.auth.AuthBase):
-    def __init__(self, sub: str, roles: List[str] = None, groups: List[str] = None):
+    def __init__(self, sub: str, roles: List[str] = None, teams: List[str] = None):
         self.sub = sub
         self.roles = roles or []
-        self.groups = groups or []
+        self.teams = teams or []
 
     def __call__(self, r):
         r.headers["authorization"] = "Bearer " + base64.urlsafe_b64encode(json.dumps(
-            {'sub': self.sub, 'roles': self.roles, 'groups': self.groups}
+            {'sub': self.sub, 'roles': self.roles, 'teams': self.teams}
         ).encode()).decode()
         return r

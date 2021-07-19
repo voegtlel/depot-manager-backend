@@ -42,3 +42,13 @@ class ReservationInWrite(BaseModel):
     contact: str = Field(...)
 
     items: List[UUID] = Field(...)
+
+
+class ReservationReturnItemState(BaseModel):
+    item_id: UUID
+    problem: bool
+    comment: Optional[str]
+
+
+class ReservationReturnInWrite(BaseModel):
+    items: List[ReservationReturnItemState] = Field(...)

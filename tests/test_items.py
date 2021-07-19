@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
 from depot_server.api import app
-from depot_server.api.auth import Authentication
+from depot_server.helper.auth import Authentication
 from depot_server.model import ItemInWrite, Item, ItemCondition, ItemState, BayInWrite, Bay, TotalReportState, \
     ReportItemInWrite, ReportState
 from depot_server.model.item_state import ItemReport

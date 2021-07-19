@@ -3,7 +3,7 @@ from requests import Session
 from typing import Tuple
 
 from depot_server.api import app
-from depot_server.api.auth import Authentication
+from depot_server.helper.auth import Authentication
 from depot_server.model import ReportElementInWrite, ReportElement, ReportProfileInWrite, ReportProfile
 from tests.db_helper import clear_all
 from tests.mock_auth import MockAuthentication, MockAuth

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Body, HTTPException
 
 from depot_server.db import DbReportElement, collections
 from depot_server.model import ReportElement, ReportElementInWrite
-from .auth import Authentication
+from depot_server.helper.auth import Authentication
 
 router = APIRouter()
 

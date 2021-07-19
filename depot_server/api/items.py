@@ -1,6 +1,6 @@
 from authlib.oidc.core import UserInfo
 from datetime import date
-from fastapi import APIRouter, Depends, Body, Query, HTTPException
+from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks
 from pymongo import DESCENDING
 from typing import List, Optional, Dict
 from uuid import UUID, uuid4
@@ -8,10 +8,11 @@ from uuid import UUID, uuid4
 from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
     DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange, DbTotalReportStateChange, \
     DbItemReport
-from depot_server.model import Item, ItemInWrite, ItemState, ReportItemInWrite
-from .auth import Authentication
-from .util import utc_now
+from depot_server.model import Item, ItemInWrite, ItemState, ReportItemInWrite, ItemCondition
+from depot_server.helper.auth import Authentication
+from depot_server.helper.util import utc_now
 from ..db.model import DbReportElement
+from ..mail.reservation_item_removed import send_reservation_item_removed
 from ..model.item_state import ItemReport
 
 router = APIRouter()
@@ -151,6 +152,7 @@ async def create_item(
 )
 async def update_item(
         item_id: UUID,
+        background_tasks: BackgroundTasks,
         item: ItemInWrite = Body(...),
         _user: UserInfo = Depends(Authentication(require_manager=True)),
 ) -> Item:
@@ -170,6 +172,10 @@ async def update_item(
     await _save_state(item_data, db_item, None, change_comment, _user['sub'])
     if not await collections.item_collection.replace_one(db_item):
         raise HTTPException(404, f"Item {item_id} not found")
+    # !Gone -> Gone -> Notify reservations
+    if item_data.condition != ItemCondition.Gone and db_item.condition == ItemCondition.Gone:
+        async for reservation in collections.reservation_collection.find({'item_id': item_id, 'returned': {'$ne': True}}):
+            background_tasks.add_task(send_reservation_item_removed, _user, db_item, reservation)
     return Item.validate(db_item)
 
 

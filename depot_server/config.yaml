@@ -1,5 +1,7 @@
-frontend_base_url: http://127.0.0.1:4200
+frontend_base_url: http://127.0.0.1:4201
 allow_origins: []
+
+return_reservation_reminder_cron_time: 10:00:00
 
 mongo:
   uri: mongodb://127.0.0.1:27017/depot
@@ -7,6 +9,7 @@ mongo:
 oauth2:
   server_metadata_url: 'http://127.0.0.1:8000/.well-known/openid-configuration'
   client_id: 'depot'
+  client_secret: 'i0CQLpy95zp4yj1UgdzJCTvFkXLK0ZwI'
 
 mail:
   host: localhost

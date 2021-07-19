@@ -6,7 +6,7 @@ from starlette.responses import StreamingResponse
 from typing import List, cast
 
 from depot_server.db import collections
-from .auth import Authentication
+from depot_server.helper.auth import Authentication
 
 router = APIRouter()
 

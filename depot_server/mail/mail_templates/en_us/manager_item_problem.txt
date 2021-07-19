@@ -1,0 +1,12 @@
+Material Problem(s) / Comment(s)
+Hello ${user.get('given_name', user.get('name', ''))},
+
+${' ' + sender['name'] if 'name' in sender else 'Somebody'} reported problems
+% if reservation is None:
+ in reservation <a href="${config.frontend_base_url}/reservations/${reservation.id}">${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')})</a>
+% endif
+:
+
+% for item in items:
+* ${'**' if item.problem else ''}${item.item.name} (${item.item.external_id}, ${config.frontend_base_url}/items/${item.item.id}): ${item.comment}${'**' if item.problem else ''}
+% endfor
