@@ -41,6 +41,14 @@ class DbItemConditionChange(BaseSubDocument):
 
 class DbItemStateChanges(BaseSubDocument):
     external_id: Optional[DbStrChange] = None
+
+    manufacturer: Optional[DbStrChange] = None
+    model: Optional[DbStrChange] = None
+    serial_number: Optional[DbStrChange] = None
+    manufacture_date: Optional[DbDateChange] = None
+    purchase_date: Optional[DbDateChange] = None
+    first_use_date: Optional[DbDateChange] = None
+
     name: Optional[DbStrChange] = None
     description: Optional[DbStrChange] = None
 
@@ -50,7 +58,6 @@ class DbItemStateChanges(BaseSubDocument):
     condition: Optional[DbItemConditionChange] = None
     condition_comment: Optional[DbStrChange] = None
 
-    purchase_date: Optional[DbDateChange] = None
     last_service: Optional[DbDateChange] = None
 
     picture_id: Optional[DbIdChange] = None
@@ -60,8 +67,6 @@ class DbItemStateChanges(BaseSubDocument):
     tags: Optional[DbTagsChange] = None
 
     bay_id: Optional[DbIdChange] = None
-
-    change_comment: Optional[DbStrChange] = None
 
 
 class DbItemReport(BaseSubDocument):
