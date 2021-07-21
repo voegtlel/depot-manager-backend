@@ -29,7 +29,16 @@ async def dayly_cron(time_of_day: time, task: Callable[[], Awaitable]):
 async def task_send_reminder_mail():
     user_cache: Dict[str, dict] = {}
     send_mails = []
-    async for reservation in collections.reservation_collection.find({'returned': False, 'end': date.today() - timedelta(days=1)}):
+    async for reservation in collections.reservation_collection.find({
+        'returned': False,
+        'end': {
+            '$in': [
+                date.today() - timedelta(days=1),
+                date.today() - timedelta(days=7),
+            ],
+            '$lt': date.today() - timedelta(days=14),
+        },
+    }):
         user = user_cache.get(reservation.user_id)
         if user is None:
             try:
