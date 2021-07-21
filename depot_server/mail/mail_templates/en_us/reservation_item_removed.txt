@@ -1,0 +1,6 @@
+Reservation Changed - Item Unavailable
+Hello ${user.get('given_name', user.get('name', ''))},
+
+your reservation ${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) has been changed.
+The item ${item.name} (${item.external_id}) was removed by ${sender.get('name')}, because something is broken.
+Review your changes here: ${config.frontend_base_url}/reservations/${reservation.id}.

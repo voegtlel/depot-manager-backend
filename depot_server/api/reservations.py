@@ -1,13 +1,15 @@
 from authlib.oidc.core import UserInfo
 from datetime import date
-from fastapi import APIRouter, Depends, Body, Query, HTTPException
+from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks
 from pymongo import DESCENDING, ASCENDING
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 from uuid import UUID, uuid4
 
-from depot_server.db import collections, DbReservation
-from depot_server.model import Reservation, ReservationInWrite
-from .auth import Authentication
+from depot_server.config import config
+from depot_server.db import collections, DbReservation, DbItem
+from depot_server.helper.auth import Authentication
+from depot_server.mail.manager_item_problem import send_manager_item_problem, ProblemItem
+from depot_server.model import Reservation, ReservationInWrite, ReservationReturnInWrite
 
 router = APIRouter()
 
@@ -47,6 +49,7 @@ async def get_reservations(
         start: Optional[date] = Query(None),
         end: Optional[date] = Query(None),
         item_id: Optional[UUID] = Query(None),
+        include_returned: Optional[bool] = Query(False),
         offset: Optional[int] = Query(None, ge=0),
         limit: Optional[int] = Query(None, gt=0),
         limit_before_start: Optional[int] = Query(None, gt=0),
@@ -60,6 +63,8 @@ async def get_reservations(
         query['user_id'] = _user['sub']
     if item_id is not None:
         query['items'] = item_id
+    if not include_returned:
+        query['returned'] = False
     if limit_before_start is not None:
         if start is None:
             raise HTTPException(400, "Require start for limit_before_start")
@@ -161,9 +166,9 @@ async def get_reservation(
 )
 async def create_reservation(
         reservation: ReservationInWrite = Body(...),
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> Reservation:
-    if reservation.team_id is not None and reservation.team_id not in _user['groups']:
+    if reservation.team_id is not None and reservation.team_id not in _user.get(config.oauth2.teams_property, []):
         raise HTTPException(400, f"User is not in team {reservation.team_id}")
     if reservation.user_id is None:
         reservation.user_id = _user['sub']
@@ -186,16 +191,18 @@ async def create_reservation(
 async def update_reservation(
         reservation_id: UUID,
         reservation: ReservationInWrite = Body(...),
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> Reservation:
     prev_reservation = await collections.reservation_collection.find_one({'_id': reservation_id})
     if prev_reservation is None:
         raise HTTPException(404, f"Reservation {reservation_id} not found")
     if prev_reservation.user_id != _user['sub'] and (
-            prev_reservation.team_id not in _user['groups'] or prev_reservation.team_id is None
+            prev_reservation.team_id not in _user.get(config.oauth2.teams_property, []) or
+            prev_reservation.team_id is None
     ) and 'admin' not in _user['roles']:
         raise HTTPException(403, f"Cannot modify {reservation_id}")
-    if reservation.team_id is not None and reservation.team_id not in _user['groups']:
+    if reservation.team_id is not None and reservation.team_id not in _user.get(config.oauth2.teams_property, []) and \
+            'admin' not in _user['roles']:
         raise HTTPException(400, f"User is not in team {reservation.team_id}")
     if reservation.user_id is None:
         reservation.user_id = _user['sub']
@@ -227,14 +234,70 @@ async def update_reservation(
 )
 async def delete_reservation(
         reservation_id: UUID,
-        _user: UserInfo = Depends(Authentication()),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
 ) -> None:
     reservation = await collections.reservation_collection.find_one({'_id': reservation_id})
     if reservation is None:
         raise HTTPException(404, f"Reservation {reservation_id} not found")
     if (reservation.start <= date.today() or (reservation.user_id != _user['sub'] and (
-            reservation.team_id not in _user['groups'] or reservation.team_id is None
+            reservation.team_id not in _user.get(config.oauth2.teams_property, []) or
+            reservation.team_id is None
     ))) and 'admin' not in _user['roles']:
         raise HTTPException(403, f"Cannot delete {reservation_id}")
     if not await collections.reservation_collection.delete_one({'_id': reservation_id}):
         raise HTTPException(404, f"Reservation {reservation_id} not found")
+
+
+@router.put(
+    '/reservations/{reservation_id}/return',
+    tags=['Reservation'],
+)
+async def return_reservation(
+        reservation_id: UUID,
+        background_tasks: BackgroundTasks,
+        reservation_return: ReservationReturnInWrite = Body(...),
+        _user: UserInfo = Depends(Authentication(require_userinfo=True)),
+) -> None:
+    reservation = await collections.reservation_collection.find_one({'_id': reservation_id})
+    if reservation is None:
+        raise HTTPException(404, f"Reservation {reservation_id} not found")
+    if reservation.user_id != _user['sub'] and (
+            reservation.team_id not in _user.get(config.oauth2.teams_property, []) or
+            reservation.team_id is None
+    ) and 'admin' not in _user['roles']:
+        raise HTTPException(403, f"Cannot modify {reservation_id}")
+
+    if reservation.start > date.today() and 'admin' not in _user['roles']:
+        raise HTTPException(400, "Cannot finish future reservation")
+    if reservation.end > date.today():
+        reservation.end = date.today()
+    reservation.returned = True
+    reservation_items = set(reservation.items)
+    if reservation_items != set(item.item_id for item in reservation_return.items):
+        raise HTTPException(400, "Items must match reservation items")
+    if not await collections.reservation_collection.replace_one(reservation):
+        raise HTTPException(404, f"Reservation {reservation_id} could not be updated")
+
+    problem_items = [
+        return_item for return_item in reservation_return.items if return_item.problem or return_item.comment
+    ]
+    if problem_items:
+        problem_items_by_id: Dict[UUID, DbItem] = {
+            item.id: item
+            async for item in collections.item_collection.find(
+                {'_id': {'$in': [return_item.item_id for return_item in problem_items]}}
+            )
+        }
+        background_tasks.add_task(
+            send_manager_item_problem,
+            _user,
+            [
+                ProblemItem(
+                    problem=problem_item.problem,
+                    comment=problem_item.comment,
+                    item=problem_items_by_id[problem_item.item_id],
+                )
+                for problem_item in problem_items if problem_item.item_id in problem_items_by_id
+            ],
+            reservation,
+        )

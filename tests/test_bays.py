@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from depot_server.api import app
-from depot_server.api.auth import Authentication
+from depot_server.helper.auth import Authentication
 from depot_server.model import BayInWrite, Bay
 from tests.db_helper import clear_all
 from tests.mock_auth import MockAuthentication, MockAuth

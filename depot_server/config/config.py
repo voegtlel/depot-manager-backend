@@ -1,3 +1,5 @@
+from datetime import time
+
 from typing import Optional, List
 
 from pydantic import BaseModel, Field
@@ -34,6 +36,8 @@ class OAuth2ClientConfig(BaseModel):
     api_base_url: Optional[str]
     server_metadata_url: Optional[str]
 
+    teams_property: str = 'teams'
+
 
 class Config(BaseModel):
     mongo: MongoConfig = Field(...)
@@ -41,3 +45,5 @@ class Config(BaseModel):
     oauth2: OAuth2ClientConfig = Field(...)
     frontend_base_url: str = Field(...)
     allow_origins: List[str] = Field(...)
+
+    return_reservation_reminder_cron_time: time = Field(...)

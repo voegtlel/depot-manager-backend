@@ -1,11 +1,10 @@
 from datetime import date, timedelta
-
 from fastapi.testclient import TestClient
 
 from depot_server.api import app
-from depot_server.api.auth import Authentication
-from depot_server.model import ReservationInWrite, Reservation, Bay, BayInWrite, ItemInWrite, ItemCondition, Item, \
-    ReservationType
+from depot_server.helper.auth import Authentication
+from depot_server.model import ReservationInWrite, Reservation, Bay, BayInWrite, ItemCondition, Item, ReservationType, \
+    ReportItemInWrite, TotalReportState
 from tests.db_helper import clear_all
 from tests.mock_auth import MockAuthentication, MockAuth
 
@@ -25,19 +24,21 @@ def test_reservation(monkeypatch, motor_mock):
 
         item_ids = []
         for i in range(3):
-            create_item = ItemInWrite(
+            create_item = ReportItemInWrite(
                 external_id=f'item_{i}',
                 name=f"Item {i}",
                 description=f"{i}. Item",
+                total_report_state=TotalReportState.Fit,
                 condition=ItemCondition.Good,
                 condition_comment="Very Good",
                 purchase_date=date.today(),
-                last_service=date.today(),
                 picture_id=None,
                 group_id=f'item_group_{i}',
                 tags=['item'],
                 bay_id=created_bay_1.id,
                 change_comment="Created",
+                report_profile_id=None,
+                report=[],
             )
             resp = client.post(
                 '/api/v1/depot/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
@@ -58,7 +59,7 @@ def test_reservation(monkeypatch, motor_mock):
         resp = client.post(
             '/api/v1/depot/reservations',
             data=create_reservation.json(),
-            auth=MockAuth(sub='user1', groups=['my-team']),
+            auth=MockAuth(sub='user1', teams=['my-team']),
         )
         assert resp.status_code == 201, resp.text
         created_reservation = Reservation.validate(resp.json())
@@ -88,7 +89,7 @@ def test_reservation(monkeypatch, motor_mock):
         resp = client.put(
             f'/api/v1/depot/reservations/{created_reservation.id}',
             data=update_reservation.json(),
-            auth=MockAuth(sub='user2', groups=['my-team', 'my-team-upd']),
+            auth=MockAuth(sub='user2', teams=['my-team', 'my-team-upd']),
         )
         assert resp.status_code == 200, resp.text
         updated_reservation = Reservation.validate(resp.json())
@@ -120,10 +121,11 @@ def test_overlap(monkeypatch, motor_mock):
 
         item_ids = []
         for i in range(3):
-            create_item = ItemInWrite(
+            create_item = ReportItemInWrite(
                 external_id=f'item_{i}',
                 name=f"Item {i}",
                 description=f"{i}. Item",
+                total_report_state=TotalReportState.Fit,
                 condition=ItemCondition.Good,
                 condition_comment="Very Good",
                 purchase_date=date.today(),
@@ -133,6 +135,8 @@ def test_overlap(monkeypatch, motor_mock):
                 tags=['item'],
                 bay_id=created_bay_1.id,
                 change_comment="Created",
+                report_profile_id=None,
+                report=[],
             )
             resp = client.post(
                 '/api/v1/depot/items', data=create_item.json(), auth=MockAuth(sub='admin1', roles=['admin']),
@@ -153,7 +157,7 @@ def test_overlap(monkeypatch, motor_mock):
         resp = client.post(
             '/api/v1/depot/reservations',
             data=create_reservation.json(),
-            auth=MockAuth(sub='user1', groups=['my-team']),
+            auth=MockAuth(sub='user1', teams=['my-team']),
         )
         assert resp.status_code == 201, resp.text
         created_reservation = Reservation.validate(resp.json())
