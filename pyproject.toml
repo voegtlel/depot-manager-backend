@@ -17,6 +17,7 @@ httpx = ">=0"
 mako = ">=1"
 aiosmtplib = ">=1"
 python-multipart = ">=0"
+pillow = ">=8"
 
 
 [tool.poetry.dev-dependencies]

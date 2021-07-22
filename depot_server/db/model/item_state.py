@@ -60,7 +60,7 @@ class DbItemStateChanges(BaseSubDocument):
 
     last_service: Optional[DbDateChange] = None
 
-    picture_id: Optional[DbIdChange] = None
+    picture_id: Optional[DbStrChange] = None
 
     group_id: Optional[DbStrChange] = None
 

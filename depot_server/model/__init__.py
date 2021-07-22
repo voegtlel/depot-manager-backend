@@ -7,3 +7,4 @@ from .report_profile import ReportProfile, ReportProfileInWrite, TotalReportStat
 from .reservation import Reservation, ReservationInWrite, ReservationType, ReservationReturnInWrite, \
     ReservationReturnItemState
 from .user import User
+from .picture import Picture

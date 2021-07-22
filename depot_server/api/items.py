@@ -56,7 +56,7 @@ async def _save_state(
     if prev_item.last_service != new_item.last_service:
         changes.last_service = DbDateChange(previous=prev_item.last_service, next=new_item.last_service)
     if prev_item.picture_id != new_item.picture_id:
-        changes.picture_id = DbIdChange(previous=prev_item.picture_id, next=new_item.picture_id)
+        changes.picture_id = DbStrChange(previous=prev_item.picture_id, next=new_item.picture_id)
     if prev_item.group_id != new_item.group_id:
         changes.group_id = DbStrChange(previous=prev_item.group_id, next=new_item.group_id)
     if prev_item.tags != new_item.tags:
