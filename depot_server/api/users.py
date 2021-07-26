@@ -21,6 +21,7 @@ async def get_users(
     return [
         User.validate(profile)
         for profile in await get_profiles()
+        if profile.get('email') and profile.get('name')
     ]
 
 
