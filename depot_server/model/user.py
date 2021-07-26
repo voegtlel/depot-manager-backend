@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from .base import BaseModel
 
@@ -9,3 +9,4 @@ class User(BaseModel):
     email: str
     picture: Optional[str]
     phone_number: Optional[str]
+    teams: Optional[List[str]]

@@ -167,7 +167,7 @@ async def update_item(
         id=item_id,
         total_report_state=item_data.total_report_state,
         last_service=item_data.last_service,
-        **item.dict(exclude_none=True, exclude={'change_comment'})
+        **item.dict(exclude_none=True, exclude={'change_comment', 'last_service', 'total_report_state'})
     )
     await _save_state(item_data, db_item, None, change_comment, _user['sub'])
     if not await collections.item_collection.replace_one(db_item):
