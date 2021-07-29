@@ -131,7 +131,7 @@ async def create_picture(
     picture_id = hashval.hex()
     try:
         await collections.item_picture_collection.delete(picture_id)
-        await collections.item_picture_thumbnail_collection.delete(picture_id)
+        await collections.item_picture_thumbnail_collection.delete(picture_id + '/preview')
     except gridfs.errors.NoFile:
         pass
     file.file.seek(0)
@@ -141,6 +141,8 @@ async def create_picture(
     thumb_f = BytesIO()
     img.save(thumb_f, format="JPEG", quality=85)
     thumb_f.seek(0)
+
+    file.file.seek(0)
 
     await collections.item_picture_collection.upload_from_stream_with_id(
         picture_id, file.filename, file.file, metadata={'contentType': file.content_type, 'hash': hashval}

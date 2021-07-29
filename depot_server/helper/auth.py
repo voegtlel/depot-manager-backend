@@ -1,9 +1,10 @@
 import httpx
 from authlib.integrations.starlette_client import OAuth as _OAuth, StarletteRemoteApp as _StarletteRemoteApp
 from authlib.oidc.core import UserInfo
+from authlib.common.errors import AuthlibBaseError, AuthlibHTTPError
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_401_UNAUTHORIZED
 from typing import Optional, List
 
 from depot_server.config import config
@@ -75,7 +76,12 @@ class Authentication:
                     status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
                 )
             return None
-        token_data = await oauth.server.parse_access_token_raw(authorization_code.credentials)
+        try:
+            token_data = await oauth.server.parse_access_token_raw(authorization_code.credentials)
+        except AuthlibHTTPError as e:
+            raise HTTPException(*e())
+        except AuthlibBaseError as e:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail=f"{e.error}: {e.description}")
         if self.require_admin and 'admin' not in token_data['roles']:
             if self.auto_error:
                 raise HTTPException(

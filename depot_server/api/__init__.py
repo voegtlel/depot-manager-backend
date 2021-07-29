@@ -1,5 +1,8 @@
-from fastapi import FastAPI, APIRouter
+import traceback
+
+from fastapi import FastAPI, APIRouter, Request, Response
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import StreamingResponse
 
 from .bays import router as bays_router
 from .items import router as items_router
@@ -45,3 +48,32 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+@app.middleware('http')
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        resp = await call_next(request)
+        if isinstance(resp, StreamingResponse):
+            if resp.status_code >= 400:
+                print(f"Header: {resp.headers}")
+
+                async def stream_print(orig_iterator):
+                    async for chunk in orig_iterator:
+                        if len(chunk) > 1024:
+                            print(f"Body: {chunk[:1024]}")
+                        else:
+                            print(f"Body: {chunk}")
+                        yield chunk
+
+                resp.body_iterator = stream_print(resp.body_iterator)
+        elif isinstance(resp, Response):
+            if resp.status_code >= 400:
+                print(f"Header: {resp.headers}")
+                print(f"Body: {resp.body}")
+        else:
+            print(f"Unknown response type: {type(resp)}")
+        return resp
+    except Exception:
+        traceback.print_exc()
+        return Response("Internal server error", status_code=500)
