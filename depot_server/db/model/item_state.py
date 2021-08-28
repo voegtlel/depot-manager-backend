@@ -79,6 +79,7 @@ class DbItemState(BaseDocument):
     __collection_name__ = 'item_state'
     __indexes__ = [
         IndexModel([('item_id', ASCENDING), ('timestamp', DESCENDING)]),
+        IndexModel([('timestamp', ASCENDING)]),
     ]
 
     id: UUID = Field(..., alias='_id')
