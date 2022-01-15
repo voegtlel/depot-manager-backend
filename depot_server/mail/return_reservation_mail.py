@@ -9,6 +9,7 @@ from depot_server.config import config
 from depot_server.db import collections
 from depot_server.helper.auth import get_profile
 from depot_server.mail.mailer import mailer
+from depot_server.model import ReservationState
 
 
 async def dayly_cron(time_of_day: time, task: Callable[[], Awaitable]):
@@ -27,16 +28,17 @@ async def dayly_cron(time_of_day: time, task: Callable[[], Awaitable]):
 
 
 async def task_send_reminder_mail():
+    print("TASK: Send reminder mails")
     user_cache: Dict[str, dict] = {}
     send_mails = []
     async for reservation in collections.reservation_collection.find({
-        'returned': False,
+        'state': ReservationState.RESERVED,
         'end': {
             '$in': [
-                date.today() - timedelta(days=1),
-                date.today() - timedelta(days=7),
+                (date.today() - timedelta(days=1)).toordinal(),
+                (date.today() - timedelta(days=7)).toordinal(),
             ],
-            '$lt': date.today() - timedelta(days=14),
+            '$lt': (date.today() - timedelta(days=14)).toordinal(),
         },
     }):
         user = user_cache.get(reservation.user_id)
@@ -50,6 +52,7 @@ async def task_send_reminder_mail():
         email = user.get('email')
         if email is None:
             continue
+        print(f"TASK: Sending reminder mail to {email}")
         send_mails.append(mailer.async_send_mail(
             user.get('locale'),
             'return_reservation_reminder',
@@ -61,6 +64,7 @@ async def task_send_reminder_mail():
             await send_mail
         except BaseException:
             traceback.print_exc()
+    print("TASK: Send reminder mails DONE")
 
 
 # TODO: Well, this unfortunately does not scale property, would need to run in a separate server cron job. (otherwise

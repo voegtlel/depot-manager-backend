@@ -1,9 +1,9 @@
 Reservation Changed
 <html>
   <body>
-    <p>Hello ${user.get('given_name', user.get('name', ''))}</p>
+    <p>Hello ${user.get('given_name', user.get('name', '')) | h}</p>
     <p></p>
-    <p>your reservation ${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) has been changed.</p>
+    <p>your reservation ${reservation.name | h} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) has been changed.</p>
     <p>Review your changes here: <a href="${config.frontend_base_url}/reservations/${reservation.id}">${config.frontend_base_url}/reservations/${reservation.id}</a>.</p>
   </body>
 </html>

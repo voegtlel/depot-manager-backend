@@ -1,9 +1,8 @@
 from datetime import date, datetime
-from typing import List, Optional
-from uuid import UUID
-
 from pydantic import Field
 from pymongo import IndexModel, ASCENDING, DESCENDING
+from typing import List, Optional
+from uuid import UUID
 
 from depot_server.db.model.base import BaseDocument, BaseSubDocument
 from depot_server.model import ItemCondition, ReportState, TotalReportState
@@ -92,4 +91,4 @@ class DbItemState(BaseDocument):
 
     user_id: str = Field(...)
 
-    comment: str = Field(...)
+    comment: Optional[str] = Field(None)

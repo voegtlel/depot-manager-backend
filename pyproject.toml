@@ -19,13 +19,15 @@ aiosmtplib = ">=1"
 python-multipart = ">=0"
 pillow = ">=8"
 
-
 [tool.poetry.dev-dependencies]
 pytest = ">=6"
 pytest-mypy = ">=0"
 pytest-flake8 = ">=1"
 requests = ">=2"
 mongomock = ">=3"
+
+[tool.poetry.scripts]
+migrate = "depot_server.db.migrate:main"
 
 [build-system]
 requires = ["poetry>=0.12"]

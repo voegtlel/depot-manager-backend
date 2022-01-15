@@ -42,7 +42,7 @@ def test_bay(monkeypatch, motor_mock):
         resp = client.delete(
             f'/api/v1/depot/bays/{created_bay.id}', auth=MockAuth(sub='admin1', roles=['admin'])
         )
-        assert resp.status_code == 200, resp.text
+        assert resp.status_code == 204, resp.text
 
         resp = client.get('/api/v1/depot/bays', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text

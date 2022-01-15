@@ -1,16 +1,14 @@
 from authlib.oidc.core import UserInfo
-from datetime import date
-from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks
-from pymongo import DESCENDING
+from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks, Response
 from typing import List, Optional, Dict
 from uuid import UUID, uuid4
 
 from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
     DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange, DbTotalReportStateChange, \
     DbItemReport
-from depot_server.model import Item, ItemInWrite, ItemState, ReportItemInWrite, ItemCondition
 from depot_server.helper.auth import Authentication
 from depot_server.helper.util import utc_now
+from depot_server.model import Item, ItemInWrite, ReportItemInWrite, ItemCondition, ReservationState
 from ..db.model import DbReportElement
 from ..mail.reservation_item_removed import send_reservation_item_removed
 from ..model.item_state import ItemReport
@@ -174,7 +172,10 @@ async def update_item(
         raise HTTPException(404, f"Item {item_id} not found")
     # !Gone -> Gone -> Notify reservations
     if item_data.condition != ItemCondition.Gone and db_item.condition == ItemCondition.Gone:
-        async for reservation in collections.reservation_collection.find({'item_id': item_id, 'returned': False}):
+        async for item_reservation in collections.item_reservation_collection.find({
+            'item_id': item_id, 'end': {'$gte': utc_now()}, 'state': ReservationState.RESERVED
+        }):
+            reservation = await collections.reservation_collection.find_one({'_id': item_reservation.reservation_id})
             background_tasks.add_task(send_reservation_item_removed, _user, db_item, reservation)
     return Item.validate(db_item)
 
@@ -212,6 +213,8 @@ async def report_item(
 @router.delete(
     '/items/{item_id}',
     tags=['Item'],
+    status_code=204,
+    response_class=Response,
 )
 async def delete_item(
         item_id: UUID,

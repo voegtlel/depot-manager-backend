@@ -33,7 +33,7 @@ async def get_pictures(
             mime_type=picture.metadata['contentType'],
             upload_timestamp=picture.upload_date
         )
-        async for picture in collections.item_picture_collection.find()
+        async for picture in collections.item_picture_collection().find()
     ]
 
 
@@ -44,9 +44,9 @@ async def _async_get_picture(
 ) -> Tuple[gridfs.GridOut, dict]:
     try:
         if picture_id.endswith('/preview'):
-            stream = await collections.item_picture_thumbnail_collection.open_download_stream(picture_id)
+            stream = await collections.item_picture_thumbnail_collection().open_download_stream(picture_id)
         else:
-            stream = await collections.item_picture_collection.open_download_stream(picture_id)
+            stream = await collections.item_picture_collection().open_download_stream(picture_id)
     except gridfs.errors.NoFile:
         raise HTTPException(404)
     file_hash = stream.metadata['hash'].hex()
@@ -130,8 +130,8 @@ async def create_picture(
     hashval = hash_.digest()
     picture_id = hashval.hex()
     try:
-        await collections.item_picture_collection.delete(picture_id)
-        await collections.item_picture_thumbnail_collection.delete(picture_id + '/preview')
+        await collections.item_picture_collection().delete(picture_id)
+        await collections.item_picture_thumbnail_collection().delete(picture_id + '/preview')
     except gridfs.errors.NoFile:
         pass
     file.file.seek(0)
@@ -144,10 +144,10 @@ async def create_picture(
 
     file.file.seek(0)
 
-    await collections.item_picture_collection.upload_from_stream_with_id(
+    await collections.item_picture_collection().upload_from_stream_with_id(
         picture_id, file.filename, file.file, metadata={'contentType': file.content_type, 'hash': hashval}
     )
-    await collections.item_picture_thumbnail_collection.upload_from_stream_with_id(
+    await collections.item_picture_thumbnail_collection().upload_from_stream_with_id(
         picture_id + '/preview', file.filename, thumb_f, metadata={'contentType': 'image/jpeg', 'hash': hashval}
     )
     return picture_id

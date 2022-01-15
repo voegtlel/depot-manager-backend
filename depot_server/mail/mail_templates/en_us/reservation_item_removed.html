@@ -1,10 +1,10 @@
 Reservation Changed - Item Unavailable
 <html>
   <body>
-    <p>Hello ${user.get('given_name', user.get('name', ''))},</p>
+    <p>Hello ${user.get('given_name', user.get('name', '')) | h},</p>
     <p></p>
-    <p>your reservation ${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) has been changed.</p>
-    <p>The item ${item.name} (${item.external_id}) was removed by ${sender.get('name')}, because something is broken.</p>
+    <p>your reservation ${reservation.name | h} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) has been changed.</p>
+    <p>The item ${item.name | h} (${item.external_id | h}) was removed by ${sender.get('name') | h}, because something is broken.</p>
     <p>Review your changes here: <a href="${config.frontend_base_url}/reservations/${reservation.id}">${config.frontend_base_url}/reservations/${reservation.id}</a>.</p>
   </body>
 </html>

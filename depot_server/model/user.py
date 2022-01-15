@@ -9,4 +9,5 @@ class User(BaseModel):
     email: str
     picture: Optional[str]
     phone_number: Optional[str]
+    roles: Optional[List[str]]
     teams: Optional[List[str]]

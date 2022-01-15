@@ -5,7 +5,7 @@ from typing import Optional, List
 import requests.auth
 from authlib.oidc.core import UserInfo
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBasicCredentials, HTTPBasic, HTTPBearer
 
 from depot_server.helper.auth import Authentication
 

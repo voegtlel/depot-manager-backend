@@ -40,3 +40,6 @@ class DbItem(BaseDocument):
     tags: List[str] = []
 
     bay_id: Optional[UUID] = None
+
+    # Id of the reservation which currently has the item taken
+    reservation_id: Optional[UUID] = None
