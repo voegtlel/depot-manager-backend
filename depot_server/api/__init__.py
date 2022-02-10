@@ -74,7 +74,7 @@ async def catch_exceptions_middleware(request: Request, call_next):
         elif isinstance(resp, Response):
             if resp.status_code >= 400:
                 print(f"Header: {resp.headers}")
-                print(f"Body: {resp.body}")
+                print(f"Body: {resp.body!r}")
         else:
             print(f"Unknown response type: {type(resp)}")
         return resp

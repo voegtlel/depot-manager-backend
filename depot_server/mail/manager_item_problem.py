@@ -27,7 +27,7 @@ async def send_manager_item_problem(
     for manager in managers:
         try:
             await mailer.async_send_mail(
-                None,
+                manager.get('locale', 'en_us'),
                 'manager_item_problem',
                 manager['email'],
                 {'sender': sender, 'user': manager, 'items': items, 'reservation': reservation, 'comment': comment},

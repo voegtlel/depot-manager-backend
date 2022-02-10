@@ -24,7 +24,9 @@ async def get_device_reservation(
     item_reservations = []
     async for item_reservation_doc in collections.item_reservation_collection.collection.aggregate([
         {'$match': {'reservation_id': reservation_data.id}},
-        {'$lookup': {'from': DbItem.__collection_name__, 'localField': 'item_id', 'foreignField': '_id', 'as': 'items'}},
+        {'$lookup': {
+            'from': DbItem.__collection_name__, 'localField': 'item_id', 'foreignField': '_id', 'as': 'items'
+        }},
     ]):
         item_docs = item_reservation_doc.pop('items')
         item_reservations.append(DbItemReservation.validate_document(item_reservation_doc))

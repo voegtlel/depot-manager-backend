@@ -46,7 +46,9 @@ async def _save_state(
     if prev_item.report_profile_id != new_item.report_profile_id:
         changes.report_profile_id = DbIdChange(previous=prev_item.report_profile_id, next=new_item.report_profile_id)
     if prev_item.total_report_state != new_item.total_report_state:
-        changes.total_report_state = DbTotalReportStateChange(previous=prev_item.total_report_state, next=new_item.total_report_state)
+        changes.total_report_state = DbTotalReportStateChange(
+            previous=prev_item.total_report_state, next=new_item.total_report_state
+        )
     if prev_item.condition != new_item.condition:
         changes.condition = DbItemConditionChange(previous=prev_item.condition, next=new_item.condition)
     if prev_item.condition_comment != new_item.condition_comment:
@@ -75,7 +77,7 @@ async def _save_state(
 async def _get_report(report_profile_id: Optional[UUID], report: List[ItemReport]) -> Optional[List[DbItemReport]]:
     if report_profile_id is None:
         if report:
-            raise HTTPException(404, f"Report profile not set, but report is set")
+            raise HTTPException(404, "Report profile not set, but report is set")
         return None
     report_profile = await collections.report_profile_collection.find_one(report_profile_id)
     if report_profile is None:

@@ -307,7 +307,9 @@ async def update_reservation(
     if len(new_items) > 0:
         await collections.item_reservation_collection.insert_many(new_items)
     if len(removed_reservation_items) > 0:
-        await collections.item_reservation_collection.delete_many({'_id': {'$in': [ri.id for ri in removed_reservation_items]}})
+        await collections.item_reservation_collection.delete_many(
+            {'_id': {'$in': [ri.id for ri in removed_reservation_items]}}
+        )
     return Reservation.validate({**db_reservation.dict(), 'items': list(reserved_items.values())})
 
 
@@ -396,7 +398,8 @@ async def reservation_action_impl(
         reservation.state = ReservationState.TAKEN
     elif any(item.state == ReservationState.RESERVED for item in reservation_item_by_id.values()):
         reservation.state = ReservationState.RESERVED
-    elif all(item.state in (ReservationState.RETURNED, ReservationState.RETURN_PROBLEM) for item in reservation_item_by_id.values()):
+    elif all(item.state in
+             (ReservationState.RETURNED, ReservationState.RETURN_PROBLEM) for item in reservation_item_by_id.values()):
         reservation.state = ReservationState.RETURNED
         # End reservation earlier
         if reservation.end > date.today():
@@ -446,8 +449,10 @@ async def reservation_action_impl(
             user,
             [
                 ProblemItem(
-                    problem=problem_item.action.value if problem_item.action in (ReservationAction.Broken, ReservationAction.Missing) else None,
-                    comment=problem_item.comment,
+                    problem=problem_item.action.value
+                    if problem_item.action in (ReservationAction.Broken, ReservationAction.Missing)
+                    else None,
+                    comment=problem_item.comment or "",
                     item=problem_items_by_id[problem_item.item_id],
                 )
                 for problem_item in problem_items if problem_item.item_id in problem_items_by_id

@@ -17,7 +17,7 @@ async def get_users(
         _user: UserInfo = Depends(Authentication()),
 ) -> List[User]:
     if 'admin' not in _user['roles']:
-        raise HTTPException(403, f"Not admin")
+        raise HTTPException(403, "Not admin")
     return [
         User.validate(profile)
         for profile in await get_profiles()

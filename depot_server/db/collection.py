@@ -2,7 +2,9 @@ from pymongo.errors import OperationFailure
 from typing import TypeVar, Generic, Type, Any, List, Tuple, AsyncIterable, Optional, Iterable, ClassVar
 
 from depot_server.db.model.base import BaseDocument
-from tests.motor_mock import AsyncIOMotorCollection
+
+from motor.core import AgnosticCollection
+
 
 TModel = TypeVar('TModel', bound=BaseDocument)
 
@@ -16,7 +18,7 @@ class ModelCollection(Generic[TModel]):
         self.__collections__.append(self)
 
     @property
-    def collection(self) -> AsyncIOMotorCollection:
+    def collection(self) -> AgnosticCollection:
         from depot_server.db import connection
         return connection.async_db()[self.collection_model.__collection_name__]
 

@@ -12,7 +12,7 @@ async def send_reservation_item_removed(sender: dict, item: DbItem, reservation:
 
     try:
         await mailer.async_send_mail(
-            None,
+            target_user.get('locale', 'en_us'),
             'manager_item_problem',
             target_user['email'],
             {'sender': sender, 'user': target_user, 'item': item, 'reservation': reservation},
