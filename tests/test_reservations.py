@@ -80,7 +80,7 @@ def test_reservation(monkeypatch, motor_mock):
         assert resp.status_code == 200, resp.text
         reservations = [Reservation.validate(b) for b in resp.json()]
         assert len(reservations) == 1
-        assert reservations[0].json(exclude={'code'}) == created_reservation.json(exclude={'code'})
+        assert reservations[0].json(exclude={'code', 'items'}) == created_reservation.json(exclude={'code', 'items'})
 
         resp = client.get(f'/api/v1/depot/reservations/{created_reservation.id}', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
@@ -304,7 +304,7 @@ def test_take_return(monkeypatch, motor_mock):
             ReservationItemState(item_id=item_ids[0], action=ReservationAction.Take)
         ])
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/take',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=take_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
@@ -328,7 +328,6 @@ def test_take_return(monkeypatch, motor_mock):
         )
         assert resp.status_code == 200, resp.text
         item_0 = Item.validate(resp.json())
-        assert item_0.reservation_id == created_reservation.id
 
         resp = client.get(
             f'/api/v1/depot/items/{item_ids[1]}',
@@ -336,11 +335,10 @@ def test_take_return(monkeypatch, motor_mock):
         )
         assert resp.status_code == 200, resp.text
         item_1 = Item.validate(resp.json())
-        assert item_1.reservation_id is None
 
-        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[1], problem=True, comment="Hello")])
+        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[1], action=ReservationAction.Broken, comment="Hello")])
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/take',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=take_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
@@ -362,7 +360,7 @@ def test_take_return(monkeypatch, motor_mock):
         assert send_sender == {'roles': [], 'sub': 'user1', 'teams': ['my-team']}
         assert len(send_items) == 1
         assert send_items[0].comment == 'Hello'
-        assert send_items[0].problem is True
+        assert send_items[0].problem == "broken"
         assert send_items[0].item.id == item_ids[1]
         assert send_comment is None
         assert send_reservation.id == created_reservation.id
@@ -371,9 +369,9 @@ def test_take_return(monkeypatch, motor_mock):
         send_comment = None
         send_reservation = None
 
-        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[2], problem=False, comment="World")], comment="Oh")
+        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[2], action=ReservationAction.Take, comment="World")], comment="Oh")
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/take',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=take_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
@@ -382,7 +380,7 @@ def test_take_return(monkeypatch, motor_mock):
         assert send_sender == {'roles': [], 'sub': 'user1', 'teams': ['my-team']}
         assert len(send_items) == 1
         assert send_items[0].comment == 'World'
-        assert send_items[0].problem is False
+        assert send_items[0].problem is None
         assert send_items[0].item.id == item_ids[2]
         assert send_comment == 'Oh'
         assert send_reservation.id == created_reservation.id
@@ -391,9 +389,9 @@ def test_take_return(monkeypatch, motor_mock):
         send_comment = None
         send_reservation = None
 
-        return_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[0], problem=False)])
+        return_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[0], action=ReservationAction.Return)])
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/return',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=return_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
@@ -411,20 +409,20 @@ def test_take_return(monkeypatch, motor_mock):
         assert taken_reservation_1.items[2].state == ReservationState.RESERVED
         assert taken_reservation_1.state == ReservationState.TAKEN
 
-        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[3], problem=False)])
+        take_action = ReservationActionInWrite(items=[ReservationItemState(item_id=item_ids[3], action=ReservationAction.Take)])
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/take',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=take_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
         assert resp.status_code == 204, resp.text
 
         return_action = ReservationActionInWrite(items=[
-            ReservationItemState(item_id=item_ids[2], problem=False),
-            ReservationItemState(item_id=item_ids[3], problem=True, comment="Something"),
+            ReservationItemState(item_id=item_ids[2], action=ReservationAction.Return),
+            ReservationItemState(item_id=item_ids[3], action=ReservationAction.Broken, comment="Something"),
         ])
         resp = client.put(
-            f'/api/v1/depot/reservations/{created_reservation.id}/return',
+            f'/api/v1/depot/reservations/{created_reservation.id}/action',
             data=return_action.json(),
             auth=MockAuth(sub='user1', teams=['my-team']),
         )
@@ -445,7 +443,7 @@ def test_take_return(monkeypatch, motor_mock):
         assert send_sender == {'roles': [], 'sub': 'user1', 'teams': ['my-team']}
         assert len(send_items) == 1
         assert send_items[0].comment == 'Something'
-        assert send_items[0].problem is True
+        assert send_items[0].problem == "broken"
         assert send_items[0].item.id == item_ids[3]
         assert send_comment is None
         assert send_reservation.id == created_reservation.id

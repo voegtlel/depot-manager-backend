@@ -402,6 +402,11 @@ async def reservation_action_impl(
         if reservation.end > date.today():
             reservation.end = date.today()
 
+    # TODO: Actually the end of an item should be set to today, always (even if too late).
+    #  Still, this is problematic if another person has already reserved the item, what happens then? Should the other
+    #  item then be moved forward in time?
+    #  Actually, same holds for picking up
+    # TODO: Mongomock seems not to support {'end': {'$min': ['$end', today_ordinal]}} :(
     if not await collections.reservation_collection.replace_one(reservation):
         raise HTTPException(404, f"Reservation {reservation.id} could not be updated")
     if len(item_reservation_returned) > 0:

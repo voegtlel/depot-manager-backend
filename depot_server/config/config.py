@@ -50,5 +50,6 @@ class Config(BaseModel):
 
     reservation_code_length: int = Field(...)
     reservation_code_chars: str = Field(...)
+    reservation_automatic_return: bool = Field(...)
 
     device_api_key: Optional[str] = Field(...)

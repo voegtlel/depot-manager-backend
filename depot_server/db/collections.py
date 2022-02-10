@@ -14,6 +14,8 @@ report_element_collection: ModelCollection[DbReportElement] = ModelCollection(Db
 report_profile_collection: ModelCollection[DbReportProfile] = ModelCollection(DbReportProfile)
 reservation_collection: ModelCollection[DbReservation] = ModelCollection(DbReservation)
 
+_TEST_NO_INDEXES: bool = False
+
 
 def item_picture_collection() -> AsyncIOMotorGridFSBucket:
     return get_loop_attr('item_picture_collection')
@@ -29,12 +31,13 @@ async def startup():
     set_loop_attr('item_picture_collection', async_gridfs('item_picture'))
     set_loop_attr('item_picture_thumbnail_collection', async_gridfs('item_picture_thumbnail'))
 
-    await asyncio.gather(
-        *[
-            collection.sync_indexes()
-            for collection in ModelCollection.__collections__
-        ]
-    )
+    if not _TEST_NO_INDEXES:
+        await asyncio.gather(
+            *[
+                collection.sync_indexes()
+                for collection in ModelCollection.__collections__
+            ]
+        )
 
 
 async def shutdown():

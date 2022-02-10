@@ -31,15 +31,42 @@ async def task_send_reminder_mail():
     print("TASK: Send reminder mails")
     user_cache: Dict[str, dict] = {}
     send_mails = []
+    if config.reservation_automatic_return:
+        async for reservation in collections.reservation_collection.find({
+            'state': ReservationState.RESERVED.value,
+            'end': {
+                '$lte': (date.today() + timedelta(days=1)).toordinal(),
+            },
+        }):
+            reservation.state = ReservationState.RETURNED
+            await collections.reservation_collection.update_one(
+                {'_id': reservation.id}, {'state': ReservationState.RETURNED.value}
+            )
+            await collections.item_reservation_collection.update_many(
+                {'reservation_id': reservation.id},
+                {'$set': {'state': ReservationState.RETURNED.value}},
+            )
+        return
     async for reservation in collections.reservation_collection.find({
         'state': ReservationState.RESERVED,
-        'end': {
-            '$in': [
-                (date.today() - timedelta(days=1)).toordinal(),
-                (date.today() - timedelta(days=7)).toordinal(),
-            ],
-            '$lt': (date.today() - timedelta(days=14)).toordinal(),
-        },
+        '$or': [
+            {
+                # end == today - 1d  # should have returned yesterday
+                # end == today - 1w  # should have returned 1 week ago
+                'end': {
+                    '$in': [
+                        (date.today() - timedelta(days=1)).toordinal(),
+                        (date.today() - timedelta(days=7)).toordinal(),
+                    ],
+                },
+            },
+            {
+                # Every day after 2w
+                'end': {
+                    '$lt': (date.today() + timedelta(days=14)).toordinal(),
+                },
+            }
+        ],
     }):
         user = user_cache.get(reservation.user_id)
         if user is None:
@@ -69,7 +96,7 @@ async def task_send_reminder_mail():
 
 # TODO: Well, this unfortunately does not scale property, would need to run in a separate server cron job. (otherwise
 #   mails will be duplicated)
-#   Note: If the backend should scale, move that away.
+#   Note: If the backend should scale, move that away. Or rather build a separate mail task queue?
 _reminder_mail_task: Optional[Task] = None
 
 
