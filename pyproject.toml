@@ -25,6 +25,8 @@ pytest-mypy = ">=0"
 pytest-flake8 = ">=1"
 requests = ">=2"
 mongomock = ">=3"
+types-pytz = ">=2021"
+types-requests = ">=2"
 
 [tool.poetry.scripts]
 migrate = "depot_server.db.migrate:main"

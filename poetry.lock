@@ -643,6 +643,33 @@ python-versions = ">=3.7"
 version = "2.0.1"
 
 [[package]]
+category = "dev"
+description = "Typing stubs for pytz"
+name = "types-pytz"
+optional = false
+python-versions = "*"
+version = "2021.3.4"
+
+[[package]]
+category = "dev"
+description = "Typing stubs for requests"
+name = "types-requests"
+optional = false
+python-versions = "*"
+version = "2.27.9"
+
+[package.dependencies]
+types-urllib3 = "<1.27"
+
+[[package]]
+category = "dev"
+description = "Typing stubs for urllib3"
+name = "types-urllib3"
+optional = false
+python-versions = "*"
+version = "1.26.9"
+
+[[package]]
 category = "main"
 description = "Backported and Experimental Type Hints for Python 3.6+"
 name = "typing-extensions"
@@ -692,7 +719,7 @@ h11 = ">=0.8"
 standard = ["websockets (>=10.0)", "httptools (>=0.2.0,<0.4.0)", "watchgod (>=0.6)", "python-dotenv (>=0.13)", "PyYAML (>=5.1)", "uvloop (>=0.14.0,<0.15.0 || >0.15.0,<0.15.1 || >0.15.1)", "colorama (>=0.4)"]
 
 [metadata]
-content-hash = "bd729b1528a3903d46b1cf9babcf83debcdeeb5dc4b700ae79789417901e44a6"
+content-hash = "9b74f365630fa77cc69aa2ac8e7f11c30f2b2953dd50fa7990f4580d6ea42edf"
 python-versions = ">=3.8"
 
 [metadata.files]
@@ -1217,6 +1244,18 @@ starlette = [
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
+]
+types-pytz = [
+    {file = "types-pytz-2021.3.4.tar.gz", hash = "sha256:101da53091013bb07403468c20d36930d749d3918054ac46f9c1bfc607dadf7d"},
+    {file = "types_pytz-2021.3.4-py3-none-any.whl", hash = "sha256:ccfa2ed29f816e3de2f882541c06ad2791f808a79cfe38265411820190999f0f"},
+]
+types-requests = [
+    {file = "types-requests-2.27.9.tar.gz", hash = "sha256:7368974534d297939492efdfdab232930440b11e2203f6df1f0c40e3242a87ea"},
+    {file = "types_requests-2.27.9-py3-none-any.whl", hash = "sha256:74070045418faf710f3154403d6a16c9e67db50e5119906ca6955f1658d20f7b"},
+]
+types-urllib3 = [
+    {file = "types-urllib3-1.26.9.tar.gz", hash = "sha256:abd2d4857837482b1834b4817f0587678dcc531dbc9abe4cde4da28cef3f522c"},
+    {file = "types_urllib3-1.26.9-py3-none-any.whl", hash = "sha256:4a54f6274ab1c80968115634a55fb9341a699492b95e32104a7c513db9fe02e9"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},

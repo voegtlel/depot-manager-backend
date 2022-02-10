@@ -11,7 +11,7 @@ from depot_server.db import collections, DbReservation, DbItem, DbItemReservatio
 from depot_server.helper.auth import Authentication
 from depot_server.mail.manager_item_problem import send_manager_item_problem, ProblemItem
 from depot_server.model import Reservation, ReservationInWrite, ReservationActionInWrite, ReservationState, \
-    ReservationAction
+    ReservationAction, ReservationItem
 
 router = APIRouter()
 
@@ -58,6 +58,7 @@ async def get_reservations(
         limit: Optional[int] = Query(None, gt=0),
         limit_before_start: Optional[int] = Query(None, gt=0),
         limit_after_end: Optional[int] = Query(None, gt=0),
+        include_items: Optional[bool] = Query(False),
         _user: UserInfo = Depends(Authentication()),
 ) -> List[Reservation]:
     query: dict = {}
@@ -114,7 +115,22 @@ async def get_reservations(
     else:
         mid = []
 
-    return before_start + mid + after_end
+    reservations = before_start + mid + after_end
+    if include_items:
+        for reservation in reservations:
+            reservation.items = []
+        reservations_by_id = {
+            reservation.id: reservation
+            for reservation in reservations
+        }
+        async for item_reservation_entry in collections.item_reservation_collection.find({
+            'reservation_id': {'$in': [reservation.id for reservation in reservations]}
+        }):
+            reservations_by_id[item_reservation_entry.reservation_id].items.append(ReservationItem(
+                item_id=item_reservation_entry.item_id, state=item_reservation_entry.state
+            ))
+
+    return reservations
 
 
 @router.get(
