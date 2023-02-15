@@ -273,7 +273,7 @@ async def update_reservation(
             'admin' not in _user['roles']:
         raise HTTPException(400, "Cannot change end of past reservation")
     set_item_ids = set(reservation.items)
-    reserved_items = {
+    reserved_items: Dict[UUID, DbItemReservation] = {
         item_reservation.item_id: item_reservation
         async for item_reservation in collections.item_reservation_collection.find({'reservation_id': reservation_id})
     }
@@ -283,8 +283,8 @@ async def update_reservation(
             reservation_id=db_reservation.id,
             item_id=item_id,
             state=ReservationState.RESERVED,
-            start=db_reservation.start,
-            end=db_reservation.end,
+            start=reservation.start,
+            end=reservation.end,
         )
         for item_id in reservation.items
         if item_id not in reserved_items
@@ -296,6 +296,13 @@ async def update_reservation(
     ]
     for item_reservation in removed_reservation_items:
         del reserved_items[item_reservation.item_id]
+    update_reservation_item_ids = [
+        item_reservation.id
+        for item_reservation in reserved_items.values()
+        if item_reservation.state == ReservationState.RESERVED and (
+                item_reservation.end != reservation.end or item_reservation.start != reservation.start
+        )
+    ]
     for new_item in new_items:
         reserved_items[new_item.item_id] = new_item
     if (db_reservation.state == ReservationState.RETURNED or reservation.end <= date.today()) and \
@@ -320,6 +327,11 @@ async def update_reservation(
     await _check_items(reservation.items, reservation.start, reservation.end, reservation_id)
     if not await collections.reservation_collection.replace_one(db_reservation):
         raise HTTPException(404, f"Reservation {reservation_id} not found")
+    if len(update_reservation_item_ids) > 0:
+        await collections.item_reservation_collection.update_many(
+            {'_id': {'$in': update_reservation_item_ids}},
+            {'$set': {'start': reservation.start, 'end': reservation.end}},
+        )
     if len(new_items) > 0:
         await collections.item_reservation_collection.insert_many(new_items)
     if len(removed_reservation_items) > 0:
