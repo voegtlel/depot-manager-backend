@@ -330,7 +330,7 @@ async def update_reservation(
     if len(update_reservation_item_ids) > 0:
         await collections.item_reservation_collection.update_many(
             {'_id': {'$in': update_reservation_item_ids}},
-            {'$set': {'start': reservation.start, 'end': reservation.end}},
+            {'$set': {'start': reservation.start.toordinal(), 'end': reservation.end.toordinal()}},
         )
     if len(new_items) > 0:
         await collections.item_reservation_collection.insert_many(new_items)
