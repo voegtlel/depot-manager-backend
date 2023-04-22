@@ -52,7 +52,7 @@ def test_item(monkeypatch, motor_mock):
         )
         assert resp.status_code == 201, resp.text
         created_item = Item.validate(resp.json())
-        assert created_item.dict(exclude={'id'}) == create_item.dict(exclude={'change_comment', 'report'})
+        assert created_item.dict(exclude={'id', 'reservation_id'}) == create_item.dict(exclude={'change_comment', 'report'})
 
         resp = client.get('/api/v1/depot/items', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
@@ -84,7 +84,7 @@ def test_item(monkeypatch, motor_mock):
         )
         assert resp.status_code == 200, resp.text
         updated_item = Item.validate(resp.json())
-        assert updated_item.dict(exclude={'id', 'total_report_state', 'last_service'}) == update_item.dict(exclude={'change_comment'})
+        assert updated_item.dict(exclude={'id', 'reservation_id', 'total_report_state', 'last_service'}) == update_item.dict(exclude={'change_comment'})
 
         report_item = ReportItemInWrite(
             external_id='item_1_rprt',
@@ -113,7 +113,7 @@ def test_item(monkeypatch, motor_mock):
         )
         assert resp.status_code == 200, resp.text
         reported_item = Item.validate(resp.json())
-        assert reported_item.dict(exclude={'id'}) == report_item.dict(exclude={'change_comment', 'report'})
+        assert reported_item.dict(exclude={'id', 'reservation_id'}) == report_item.dict(exclude={'change_comment', 'report'})
 
         resp = client.get(f'/api/v1/depot/items/{created_item.id}/history', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text
@@ -158,7 +158,7 @@ def test_item(monkeypatch, motor_mock):
         resp = client.delete(
             f'/api/v1/depot/items/{created_item.id}', auth=MockAuth(sub='admin1', roles=['admin'])
         )
-        assert resp.status_code == 200, resp.text
+        assert resp.status_code == 204, resp.text
 
         resp = client.get('/api/v1/depot/items', auth=MockAuth(sub='user1'))
         assert resp.status_code == 200, resp.text

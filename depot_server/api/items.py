@@ -1,16 +1,14 @@
 from authlib.oidc.core import UserInfo
-from datetime import date
-from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks
-from pymongo import DESCENDING
+from fastapi import APIRouter, Depends, Body, Query, HTTPException, BackgroundTasks, Response
 from typing import List, Optional, Dict
 from uuid import UUID, uuid4
 
 from depot_server.db import collections, DbItem, DbItemState, DbStrChange, \
     DbItemStateChanges, DbItemConditionChange, DbDateChange, DbIdChange, DbTagsChange, DbTotalReportStateChange, \
     DbItemReport
-from depot_server.model import Item, ItemInWrite, ItemState, ReportItemInWrite, ItemCondition
 from depot_server.helper.auth import Authentication
 from depot_server.helper.util import utc_now
+from depot_server.model import Item, ItemInWrite, ReportItemInWrite, ItemCondition, ReservationState
 from ..db.model import DbReportElement
 from ..mail.reservation_item_removed import send_reservation_item_removed
 from ..model.item_state import ItemReport
@@ -48,7 +46,9 @@ async def _save_state(
     if prev_item.report_profile_id != new_item.report_profile_id:
         changes.report_profile_id = DbIdChange(previous=prev_item.report_profile_id, next=new_item.report_profile_id)
     if prev_item.total_report_state != new_item.total_report_state:
-        changes.total_report_state = DbTotalReportStateChange(previous=prev_item.total_report_state, next=new_item.total_report_state)
+        changes.total_report_state = DbTotalReportStateChange(
+            previous=prev_item.total_report_state, next=new_item.total_report_state
+        )
     if prev_item.condition != new_item.condition:
         changes.condition = DbItemConditionChange(previous=prev_item.condition, next=new_item.condition)
     if prev_item.condition_comment != new_item.condition_comment:
@@ -56,7 +56,7 @@ async def _save_state(
     if prev_item.last_service != new_item.last_service:
         changes.last_service = DbDateChange(previous=prev_item.last_service, next=new_item.last_service)
     if prev_item.picture_id != new_item.picture_id:
-        changes.picture_id = DbIdChange(previous=prev_item.picture_id, next=new_item.picture_id)
+        changes.picture_id = DbStrChange(previous=prev_item.picture_id, next=new_item.picture_id)
     if prev_item.group_id != new_item.group_id:
         changes.group_id = DbStrChange(previous=prev_item.group_id, next=new_item.group_id)
     if prev_item.tags != new_item.tags:
@@ -77,7 +77,7 @@ async def _save_state(
 async def _get_report(report_profile_id: Optional[UUID], report: List[ItemReport]) -> Optional[List[DbItemReport]]:
     if report_profile_id is None:
         if report:
-            raise HTTPException(404, f"Report profile not set, but report is set")
+            raise HTTPException(404, "Report profile not set, but report is set")
         return None
     report_profile = await collections.report_profile_collection.find_one(report_profile_id)
     if report_profile is None:
@@ -167,14 +167,17 @@ async def update_item(
         id=item_id,
         total_report_state=item_data.total_report_state,
         last_service=item_data.last_service,
-        **item.dict(exclude_none=True, exclude={'change_comment'})
+        **item.dict(exclude_none=True, exclude={'change_comment', 'last_service', 'total_report_state'})
     )
     await _save_state(item_data, db_item, None, change_comment, _user['sub'])
     if not await collections.item_collection.replace_one(db_item):
         raise HTTPException(404, f"Item {item_id} not found")
     # !Gone -> Gone -> Notify reservations
     if item_data.condition != ItemCondition.Gone and db_item.condition == ItemCondition.Gone:
-        async for reservation in collections.reservation_collection.find({'item_id': item_id, 'returned': False}):
+        async for item_reservation in collections.item_reservation_collection.find({
+            'item_id': item_id, 'end': {'$gte': utc_now()}, 'state': ReservationState.RESERVED
+        }):
+            reservation = await collections.reservation_collection.find_one({'_id': item_reservation.reservation_id})
             background_tasks.add_task(send_reservation_item_removed, _user, db_item, reservation)
     return Item.validate(db_item)
 
@@ -212,6 +215,8 @@ async def report_item(
 @router.delete(
     '/items/{item_id}',
     tags=['Item'],
+    status_code=204,
+    response_class=Response,
 )
 async def delete_item(
         item_id: UUID,
@@ -219,37 +224,3 @@ async def delete_item(
 ) -> None:
     if not await collections.item_collection.delete_one({'_id': item_id}):
         raise HTTPException(404, f"Item {item_id} not found")
-
-
-@router.get(
-    '/items/{item_id}/history',
-    tags=['Item'],
-    response_model=List[ItemState],
-)
-async def get_item_history(
-        item_id: UUID,
-        start: Optional[date] = Query(None),
-        end: Optional[date] = Query(None),
-        offset: Optional[int] = Query(None),
-        limit: Optional[int] = Query(None),
-        _user: UserInfo = Depends(Authentication()),
-) -> List[ItemState]:
-    if not await collections.item_collection.exists({'_id': item_id}):
-        raise HTTPException(404, f"Item {item_id} not found")
-    query: dict = {'item_id': item_id}
-    if start is not None:
-        query['timestamp'] = {'$gte': start}
-    if end is not None:
-        if 'timestamp' in query:
-            query['timestamp']['$lt'] = end
-        else:
-            query['timestamp'] = {'$lt': end}
-    return [
-        ItemState.validate(item_state)
-        async for item_state in collections.item_state_collection.find(
-            {'item_id': item_id},
-            skip=offset,
-            limit=limit,
-            sort=[('timestamp', DESCENDING)],
-        )
-    ]

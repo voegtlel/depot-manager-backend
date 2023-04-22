@@ -1,17 +1,20 @@
 Material Problem(s) / Comment(s)
 <html>
   <body>
-    <p>Hello ${user.get('given_name', user.get('name', ''))},</p>
+    <p>Hello ${user.get('given_name', user.get('name', '')) | h},</p>
     <p></p>
-    <p>${' ' + sender['name'] if 'name' in sender else 'Somebody'} reported problems
+    <p>${' ' + sender['name'] if 'name' in sender else 'Somebody' | h} reported problems
       % if reservation is None:
-        in reservation <a href="${config.frontend_base_url}/reservations/${reservation.id}">${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')})</a>
+        in reservation <a href="${config.frontend_base_url}/reservations/${reservation.id}">${reservation.name | h} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')})</a>
       % endif
       :
     </p>
+    % if comment:
+    <p>${comment}</p>
+    % endif
     <ul>
       % for item in items:
-      <li${' style="color:red"' if item.problem else ''}><a href="${config.frontend_base_url}/items/${item.item.id}">${item.item.name} (${item.item.external_id})</a>: ${item.comment if item.comment else 'No comment'}</li>
+      <li${' style="color:red"' if item.problem else ''}><a href="${config.frontend_base_url}/items/${item.item.id}">${item.item.name} (${item.item.external_id})</a>: ${item.problem} ${item.comment if item.comment else 'No comment' | h}</li>
       % endfor
     </ul>
   </body>

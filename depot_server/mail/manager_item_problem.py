@@ -10,12 +10,14 @@ from depot_server.mail.mailer import mailer
 
 @dataclass
 class ProblemItem:
-    problem: bool
+    problem: Optional[str]
     comment: str
     item: Optional[DbItem]
 
 
-async def send_manager_item_problem(sender: dict, items: List[ProblemItem], reservation: Optional[DbReservation]):
+async def send_manager_item_problem(
+        sender: dict, items: List[ProblemItem], comment: Optional[str], reservation: Optional[DbReservation]
+):
     managers = [
         profile
         for profile in await get_profiles()
@@ -25,10 +27,10 @@ async def send_manager_item_problem(sender: dict, items: List[ProblemItem], rese
     for manager in managers:
         try:
             await mailer.async_send_mail(
-                None,
+                manager.get('locale', 'en_us'),
                 'manager_item_problem',
                 manager['email'],
-                {'sender': sender, 'user': manager, 'items': items, 'reservation': reservation},
+                {'sender': sender, 'user': manager, 'items': items, 'reservation': reservation, 'comment': comment},
             )
         except BaseException:
             traceback.print_exc()

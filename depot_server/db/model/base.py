@@ -1,10 +1,10 @@
-from datetime import datetime, date
 from enum import Enum
-from typing import List, Any, Sequence, Mapping, TypeVar, Type, get_origin, Union
-from uuid import UUID
 
+from datetime import datetime, date
 from pydantic import BaseModel
 from pymongo import IndexModel
+from typing import List, Any, Sequence, Mapping, TypeVar, Type, get_origin, Union, ClassVar
+from uuid import UUID
 
 
 def _safe_document(doc: Any):
@@ -58,8 +58,8 @@ class BaseSubDocument(BaseModel):
 
 
 class BaseDocument(BaseSubDocument):
-    __indexes__: List[IndexModel] = []
-    __collection_name__: str
+    __indexes__: ClassVar[List[IndexModel]] = []
+    __collection_name__: ClassVar[str]
 
     def document(self):
         return _safe_document(self.dict(exclude_none=True, by_alias=True))

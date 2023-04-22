@@ -2,6 +2,11 @@ frontend_base_url: http://127.0.0.1:4201
 allow_origins: []
 
 return_reservation_reminder_cron_time: 10:00:00
+reservation_code_length: 6
+reservation_code_chars: "123456789"
+reservation_automatic_return: True
+
+device_api_key: 'abcdefg'
 
 mongo:
   uri: mongodb://127.0.0.1:27017/depot

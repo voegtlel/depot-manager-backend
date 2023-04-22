@@ -47,3 +47,9 @@ class Config(BaseModel):
     allow_origins: List[str] = Field(...)
 
     return_reservation_reminder_cron_time: time = Field(...)
+
+    reservation_code_length: int = Field(...)
+    reservation_code_chars: str = Field(...)
+    reservation_automatic_return: bool = Field(...)
+
+    device_api_key: Optional[str] = Field(...)

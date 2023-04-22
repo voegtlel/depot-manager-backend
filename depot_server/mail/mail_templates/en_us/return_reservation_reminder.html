@@ -1,9 +1,9 @@
 Please Return Reservation
 <html>
   <body>
-    <p>Hello ${user.get('given_name', user.get('name', ''))}</p>
+    <p>Hello ${user.get('given_name', user.get('name', '')) | h}</p>
     <p></p>
-    <p>your reservation ${reservation.name} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) is expired and we kindly ask you to confirm the return of all reserved items.</p>
+    <p>your reservation ${reservation.name | h} (${reservation.start.strftime('%Y-%m-%d %H:%M')} - ${reservation.end.strftime('%Y-%m-%d %H:%M')}) is expired and we kindly ask you to confirm the return of all reserved items.</p>
     <p>Click here to confirm: <a href="${config.frontend_base_url}/reservations/${reservation.id}">${config.frontend_base_url}/reservations/${reservation.id}/return</a>.</p>
   </body>
 </html>

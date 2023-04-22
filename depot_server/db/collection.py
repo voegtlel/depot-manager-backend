@@ -1,31 +1,47 @@
-from typing import TypeVar, Generic, Type, Any, List, Tuple, AsyncIterable, Optional, Iterable
-
-from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo.errors import OperationFailure
+from typing import TypeVar, Generic, Type, Any, List, Tuple, AsyncIterable, Optional, Iterable, ClassVar
 
 from depot_server.db.model.base import BaseDocument
+
+from motor.core import AgnosticCollection
+
 
 TModel = TypeVar('TModel', bound=BaseDocument)
 
 
 class ModelCollection(Generic[TModel]):
+    __collections__: ClassVar[List['ModelCollection']] = []
+    collection_model: Type[TModel]
+
     def __init__(self, collection_model: Type[TModel]):
-        from depot_server.db import connection
-
         self.collection_model = collection_model
-        assert connection.async_db is not None, "Database not initialized"
-        self.collection: AsyncIOMotorCollection = connection.async_db[collection_model.__collection_name__]
+        self.__collections__.append(self)
 
-    async def create_indexes(self):
-        idx = getattr(self.collection_model, '__indexes__', None)
-        if idx:
+    @property
+    def collection(self) -> AgnosticCollection:
+        from depot_server.db import connection
+        return connection.async_db()[self.collection_model.__collection_name__]
+
+    async def sync_indexes(self):
+        indexes = self.collection_model.__indexes__
+        # Drop gone indexes
+        keys = [
+            idx.document['key']
+            for idx in indexes
+        ]
+        async for existing_idx in self.collection.list_indexes():
+            if existing_idx['key'] not in keys and existing_idx['name'] != '_id_':
+                await self.collection.drop_index(existing_idx['name'])
+                print(f"Dropped index {existing_idx} for {self.collection.name}")
+        # (Re)create new indexes
+        if len(indexes) > 0:
             try:
-                created_indexes = await self.collection.create_indexes(idx)
+                created_indexes = await self.collection.create_indexes(indexes)
                 if created_indexes:
                     print(f"Created indexes {created_indexes} for {self.collection.name}")
             except OperationFailure:
                 await self.collection.drop_indexes()
-                created_indexes = await self.collection.create_indexes(idx)
+                created_indexes = await self.collection.create_indexes(indexes)
                 if created_indexes:
                     print(f"Recreated indexes {created_indexes} for {self.collection.name}")
 
@@ -37,7 +53,7 @@ class ModelCollection(Generic[TModel]):
     async def insert_many(
             self, documents: Iterable[TModel], **kwargs
     ) -> None:
-        await self.collection.insert_one((document.document() for document in documents), **kwargs)
+        await self.collection.insert_many([document.document() for document in documents], **kwargs)
 
     async def find(
             self, filter: Any, skip: int = None, limit: int = None, sort: List[Tuple[str, int]] = None, **kwargs

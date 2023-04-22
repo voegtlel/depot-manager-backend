@@ -1,8 +1,7 @@
-from typing import Optional
-from uuid import UUID
-
 from pydantic import Field
 from pymongo import IndexModel, ASCENDING
+from typing import Optional
+from uuid import UUID
 
 from depot_server.db.model.base import BaseDocument
 

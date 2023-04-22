@@ -9,6 +9,7 @@ from depot_server.config import config
 from depot_server.db import collections
 from depot_server.helper.auth import get_profile
 from depot_server.mail.mailer import mailer
+from depot_server.model import ReservationState
 
 
 async def dayly_cron(time_of_day: time, task: Callable[[], Awaitable]):
@@ -27,9 +28,46 @@ async def dayly_cron(time_of_day: time, task: Callable[[], Awaitable]):
 
 
 async def task_send_reminder_mail():
+    print("TASK: Send reminder mails")
     user_cache: Dict[str, dict] = {}
     send_mails = []
-    async for reservation in collections.reservation_collection.find({'returned': False, 'end': date.today() - timedelta(days=1)}):
+    if config.reservation_automatic_return:
+        async for reservation in collections.reservation_collection.find({
+            'state': ReservationState.RESERVED.value,
+            'end': {
+                '$lte': (date.today() + timedelta(days=1)).toordinal(),
+            },
+        }):
+            reservation.state = ReservationState.RETURNED
+            await collections.reservation_collection.update_one(
+                {'_id': reservation.id}, {'state': ReservationState.RETURNED.value}
+            )
+            await collections.item_reservation_collection.update_many(
+                {'reservation_id': reservation.id},
+                {'$set': {'state': ReservationState.RETURNED.value}},
+            )
+        return
+    async for reservation in collections.reservation_collection.find({
+        'state': ReservationState.RESERVED,
+        '$or': [
+            {
+                # end == today - 1d  # should have returned yesterday
+                # end == today - 1w  # should have returned 1 week ago
+                'end': {
+                    '$in': [
+                        (date.today() - timedelta(days=1)).toordinal(),
+                        (date.today() - timedelta(days=7)).toordinal(),
+                    ],
+                },
+            },
+            {
+                # Every day after 2w
+                'end': {
+                    '$lt': (date.today() + timedelta(days=14)).toordinal(),
+                },
+            }
+        ],
+    }):
         user = user_cache.get(reservation.user_id)
         if user is None:
             try:
@@ -41,6 +79,7 @@ async def task_send_reminder_mail():
         email = user.get('email')
         if email is None:
             continue
+        print(f"TASK: Sending reminder mail to {email}")
         send_mails.append(mailer.async_send_mail(
             user.get('locale'),
             'return_reservation_reminder',
@@ -52,11 +91,12 @@ async def task_send_reminder_mail():
             await send_mail
         except BaseException:
             traceback.print_exc()
+    print("TASK: Send reminder mails DONE")
 
 
 # TODO: Well, this unfortunately does not scale property, would need to run in a separate server cron job. (otherwise
 #   mails will be duplicated)
-#   Note: If the backend should scale, move that away.
+#   Note: If the backend should scale, move that away. Or rather build a separate mail task queue?
 _reminder_mail_task: Optional[Task] = None
 
 

@@ -7,6 +7,10 @@ ${' ' + sender['name'] if 'name' in sender else 'Somebody'} reported problems
 % endif
 :
 
+% if comment:
+${comment}
+% endif
+
 % for item in items:
-* ${'**' if item.problem else ''}${item.item.name} (${item.item.external_id}, ${config.frontend_base_url}/items/${item.item.id}): ${item.comment}${'**' if item.problem else ''}
+* ${'**' if item.problem else ''}${item.item.name} (${item.item.external_id}, ${config.frontend_base_url}/items/${item.item.id}): ${item.problem} ${item.comment}${'**' if item.problem else ''}
 % endfor

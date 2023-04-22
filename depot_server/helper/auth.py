@@ -1,12 +1,16 @@
 import httpx
+from authlib.common.errors import AuthlibBaseError, AuthlibHTTPError
 from authlib.integrations.starlette_client import OAuth as _OAuth, StarletteRemoteApp as _StarletteRemoteApp
 from authlib.oidc.core import UserInfo
+from datetime import date
 from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from starlette.status import HTTP_403_FORBIDDEN
-from typing import Optional, List
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_401_UNAUTHORIZED
+from typing import Optional, List, Tuple
 
 from depot_server.config import config
+from depot_server.db import collections, DbReservation
+from depot_server.model import User
 
 
 class StarletteRemoteApp(_StarletteRemoteApp):
@@ -75,7 +79,12 @@ class Authentication:
                     status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
                 )
             return None
-        token_data = await oauth.server.parse_access_token_raw(authorization_code.credentials)
+        try:
+            token_data = await oauth.server.parse_access_token_raw(authorization_code.credentials)
+        except AuthlibHTTPError as e:
+            raise HTTPException(*e())
+        except AuthlibBaseError as e:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail=f"{e.error}: {e.description}")
         if self.require_admin and 'admin' not in token_data['roles']:
             if self.auto_error:
                 raise HTTPException(
@@ -94,3 +103,36 @@ class Authentication:
             )
             token_data.update(userinfo)
         return token_data
+
+
+class DeviceAuthentication:
+    def __init__(
+            self,
+            auto_error: bool = True,
+    ):
+        self.auto_error = auto_error
+
+    async def __call__(
+            self,
+            device_api_key: Optional[str] = Depends(APIKeyHeader(name="X-Device-Api-Key", auto_error=False)),
+            reservation_code: Optional[str] = Depends(APIKeyHeader(name="X-Reservation-Code", auto_error=False)),
+    ) -> Tuple[Optional[User], Optional[DbReservation]]:
+        if device_api_key is None or reservation_code is None:
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
+                )
+            return None, None
+        if device_api_key != config.device_api_key:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        reservation = await collections.reservation_collection.find_one(
+            {'code': reservation_code, 'start': {'$lte': date.today().toordinal()}},
+        )
+        if reservation is None:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="No reservation for token")
+        user_id = reservation.user_id
+        profile = await get_profile(user_id)
+        if profile is None:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="No profile for user id")
+
+        return User.validate(profile), reservation

@@ -1,4 +1,4 @@
-from pydantic import BaseModel as _BaseModel, Extra
+from pydantic import BaseModel as _BaseModel
 
 
 def camelcase(name: str) -> str:

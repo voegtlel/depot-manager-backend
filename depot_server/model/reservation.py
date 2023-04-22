@@ -13,22 +13,35 @@ class ReservationType(str, Enum):
     TEAM = 'team'
 
 
+class ReservationState(str, Enum):
+    RESERVED = 'reserved'
+    TAKEN = 'taken'
+    RETURNED = 'returned'
+    RETURN_PROBLEM = 'return-problem'
+
+
+class ReservationItem(BaseModel):
+    item_id: UUID = Field(...)
+    state: ReservationState = Field(...)
+
+
 class Reservation(BaseModel):
     id: UUID = Field(...)
     type: ReservationType = Field(...)
+    code: Optional[str] = Field(None)
+    state: ReservationState = Field(...)
+    active: Optional[bool] = Field(None)
     name: str = Field(...)
 
     start: date = Field(...)
     end: date = Field(...)
 
     user_id: str = Field(...)
-    team_id: Optional[str] = None
+    team_id: Optional[str] = Field(None)
 
     contact: str = Field(...)
 
-    items: List[UUID] = Field(...)
-
-    returned: bool = Field(...)
+    items: Optional[List[ReservationItem]] = Field(None)
 
 
 class ReservationInWrite(BaseModel):
@@ -38,19 +51,29 @@ class ReservationInWrite(BaseModel):
     start: date = Field(...)
     end: date = Field(...)
 
-    user_id: Optional[str] = None
-    team_id: Optional[str] = None
+    user_id: Optional[str] = Field(None)
+    team_id: Optional[str] = Field(None)
 
     contact: str = Field(...)
 
     items: List[UUID] = Field(...)
 
 
-class ReservationReturnItemState(BaseModel):
+class ReservationAction(str, Enum):
+    Take = 'take'
+    Return = 'return'
+    Remove = 'remove'
+    Broken = 'broken'
+    Missing = 'missing'
+
+
+class ReservationItemState(BaseModel):
     item_id: UUID
-    problem: bool
-    comment: Optional[str]
+    action: ReservationAction
+    comment: Optional[str] = None
 
 
-class ReservationReturnInWrite(BaseModel):
-    items: List[ReservationReturnItemState] = Field(...)
+class ReservationActionInWrite(BaseModel):
+    items: List[ReservationItemState] = Field(...)
+
+    comment: Optional[str] = None

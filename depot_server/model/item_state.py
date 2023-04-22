@@ -77,10 +77,12 @@ class ItemStateChanges(BaseModel):
 
     bay_id: Optional[IdChange] = None
 
+    reservation_id: Optional[IdChange] = None
+
 
 class ItemReport(BaseModel):
-    report_element_id: UUID
-    state: ReportState
+    report_element_id: UUID = Field(...)
+    state: ReportState = Field(...)
     comment: Optional[str] = None
 
 
@@ -95,4 +97,4 @@ class ItemState(BaseModel):
 
     user_id: str = Field(...)
 
-    comment: str = Field(...)
+    comment: Optional[str] = Field(None)

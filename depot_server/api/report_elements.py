@@ -1,12 +1,11 @@
+from authlib.oidc.core import UserInfo
+from fastapi import APIRouter, Depends, Body, HTTPException, Response
 from typing import List
 from uuid import UUID, uuid4
 
-from authlib.oidc.core import UserInfo
-from fastapi import APIRouter, Depends, Body, HTTPException
-
 from depot_server.db import DbReportElement, collections
-from depot_server.model import ReportElement, ReportElementInWrite
 from depot_server.helper.auth import Authentication
+from depot_server.model import ReportElement, ReportElementInWrite
 
 router = APIRouter()
 
@@ -80,6 +79,8 @@ async def update_report_element(
 @router.delete(
     '/report-elements/{report_element_id}',
     tags=['Report Element'],
+    status_code=204,
+    response_class=Response,
 )
 async def delete_report_element(
         report_element_id: UUID,

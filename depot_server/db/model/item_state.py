@@ -1,9 +1,8 @@
 from datetime import date, datetime
-from typing import List, Optional
-from uuid import UUID
-
 from pydantic import Field
 from pymongo import IndexModel, ASCENDING, DESCENDING
+from typing import List, Optional
+from uuid import UUID
 
 from depot_server.db.model.base import BaseDocument, BaseSubDocument
 from depot_server.model import ItemCondition, ReportState, TotalReportState
@@ -41,6 +40,14 @@ class DbItemConditionChange(BaseSubDocument):
 
 class DbItemStateChanges(BaseSubDocument):
     external_id: Optional[DbStrChange] = None
+
+    manufacturer: Optional[DbStrChange] = None
+    model: Optional[DbStrChange] = None
+    serial_number: Optional[DbStrChange] = None
+    manufacture_date: Optional[DbDateChange] = None
+    purchase_date: Optional[DbDateChange] = None
+    first_use_date: Optional[DbDateChange] = None
+
     name: Optional[DbStrChange] = None
     description: Optional[DbStrChange] = None
 
@@ -50,18 +57,15 @@ class DbItemStateChanges(BaseSubDocument):
     condition: Optional[DbItemConditionChange] = None
     condition_comment: Optional[DbStrChange] = None
 
-    purchase_date: Optional[DbDateChange] = None
     last_service: Optional[DbDateChange] = None
 
-    picture_id: Optional[DbIdChange] = None
+    picture_id: Optional[DbStrChange] = None
 
     group_id: Optional[DbStrChange] = None
 
     tags: Optional[DbTagsChange] = None
 
     bay_id: Optional[DbIdChange] = None
-
-    change_comment: Optional[DbStrChange] = None
 
 
 class DbItemReport(BaseSubDocument):
@@ -74,6 +78,7 @@ class DbItemState(BaseDocument):
     __collection_name__ = 'item_state'
     __indexes__ = [
         IndexModel([('item_id', ASCENDING), ('timestamp', DESCENDING)]),
+        IndexModel([('timestamp', ASCENDING)]),
     ]
 
     id: UUID = Field(..., alias='_id')
@@ -86,4 +91,4 @@ class DbItemState(BaseDocument):
 
     user_id: str = Field(...)
 
-    comment: str = Field(...)
+    comment: Optional[str] = Field(None)
